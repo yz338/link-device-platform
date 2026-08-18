@@ -1,4 +1,4 @@
-package com.devicemanagement.module.system.dto;
+package com.devicemanagement.module.device.dto;
 
 import lombok.Data;
 
