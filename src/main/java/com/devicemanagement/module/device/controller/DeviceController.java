@@ -1,7 +1,7 @@
 package com.devicemanagement.module.device.controller;
 
 import com.devicemanagement.common.Result;
-import com.devicemanagement.module.system.dto.DeviceDTO;
+import com.devicemanagement.module.device.dto.DeviceDTO;
 import com.devicemanagement.module.device.entity.Device;
 import com.devicemanagement.module.device.service.DeviceService;
 import org.springframework.beans.factory.annotation.Autowired;

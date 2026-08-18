@@ -2,7 +2,7 @@ package com.devicemanagement.module.device.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.devicemanagement.module.system.dto.DeviceDTO;
+import com.devicemanagement.module.device.dto.DeviceDTO;
 import com.devicemanagement.module.device.entity.Device;
 import com.devicemanagement.module.device.mapper.DeviceMapper;
 import com.devicemanagement.module.device.service.DeviceService;
