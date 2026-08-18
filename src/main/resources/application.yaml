@@ -3,7 +3,7 @@ spring:
     name: device-management
   datasource:
     # 使用环境变量便于学生按自己的 MySQL 账号调整，不在代码中写死真实密码。
-    url: ${DEVICE_DB_URL:jdbc:mysql://121.40.224.123:3306/cigar?serverTimezone=UTC&useSSL=false&characterEncoding=utf8}
+    url: ${DEVICE_DB_URL:jdbc:mysql://121.40.224.123:3306/device_management_hy?serverTimezone=UTC&useSSL=false&characterEncoding=utf8}
     username: ${DEVICE_DB_USERNAME:team_user}
     password: ${DEVICE_DB_PASSWORD:Team123!@#}
     driver-class-name: com.mysql.cj.jdbc.Driver
