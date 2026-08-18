@@ -1,0 +1,35 @@
+<?xml version="1.0"   encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.devicemanagement.module.system.mapper.WorkOrderMapper">
+    <select id="selectWorkOrderById" resultType="com.devicemanagement.module.system.vo.WorkOrderDetailVO">
+        wo.order_no AS work_order_id,
+        wo.order_title,
+        a.device_name AS relate_device,
+        a.order_desc AS work_desc,
+        a.alarm_content,
+        wo.deadline,
+        wo.order_status,
+        hm.method AS handle_method,
+        pr.order_context AS handle_explain,
+        vr.verify_status,
+        vr.verification_result AS verify_decision,
+        vr.verify_opinion,
+        pi.image_url AS attachment
+        FROM work_order wo
+        LEFT JOIN alarm a ON wo.alarm_id = a.alarm_id
+        LEFT JOIN (
+            SELECT * FROM process_record pr1
+            WHERE pr1.process_id IN (SELECT MAX(process_id) FROM process_record GROUP BY order_id)
+        ) pr ON wo.order_id = pr.order_id
+        LEFT JOIN handling_methods hm ON pr.method_id = hm.method_id
+        LEFT JOIN (
+            SELECT * FROM verification_records vr1
+            WHERE vr1.verification_id IN (SELECT MAX(verification_id) FROM verification_records GROUP BY order_id)
+        ) vr ON wo.order_id = vr.order_id
+        LEFT JOIN process_images pi ON pr.process_id = pi.process_id
+        WHERE wo.order_no = #{id}
+    </select>
+
+</mapper>
