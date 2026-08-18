@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: device-management
+  datasource:
+    # 使用环境变量便于学生按自己的 MySQL 账号调整，不在代码中写死真实密码。
+    url: ${DEVICE_DB_URL:jdbc:mysql://121.40.224.123:3306/cigar?serverTimezone=UTC&useSSL=false&characterEncoding=utf8}
+    username: ${DEVICE_DB_USERNAME:team_user}
+    password: ${DEVICE_DB_PASSWORD:Team123!@#}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${DEVICE_REDIS_HOST:localhost}
+      port: ${DEVICE_REDIS_PORT:6379}
+      database: ${DEVICE_REDIS_DATABASE:0}
+
+server:
+  port: 8080
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+security:
+  jwt:
+    # 教学环境默认密钥；部署时必须通过 DEVICE_JWT_SECRET 覆盖。
+    secret: ${DEVICE_JWT_SECRET:device-management-course-jwt-secret-change-in-production-2026}
+    expire-seconds: 7200
+    refresh-expire-seconds: 604800
