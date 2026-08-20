@@ -1,5 +1,6 @@
 package com.devicemanagement.module.system.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 @Schema(description = "系统用户")
 public class SysUser {
 
-    @TableId
+    @TableId(type = IdType.AUTO)
     @Schema(description = "用户主键", example = "1")
     private Long id;
     @Schema(description = "登录用户名", example = "admin")
@@ -29,5 +30,5 @@ public class SysUser {
     @Schema(description = "是否启用", example = "true")
     private Boolean enabled;
     @Schema(description = "创建时间", example = "2026-08-16T10:00:00")
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 }

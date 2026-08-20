@@ -1,6 +1,5 @@
 package com.devicemanagement.module.device.entity;
 
-import java.io.Serializable;
 import java.util.Date;
 import lombok.Data;
 
@@ -8,7 +7,7 @@ import lombok.Data;
  * alarm
  */
 @Data
-public class Alarm implements Serializable {
+public class Alarm {
     /**
      * 告警ID
      */
@@ -42,12 +41,10 @@ public class Alarm implements Serializable {
     /**
      * 状态
      */
-    private Byte status;
+    private Integer status;
 
     /**
      * 处理人
      */
     private String handler;
-
-    private static final long serialVersionUID = 1L;
 }

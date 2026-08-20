@@ -2,11 +2,13 @@ package com.devicemanagement.module.system.mapper;
 
 import com.devicemanagement.module.system.entity.SysUser;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
 /** 查询用户自身与其角色、权限编码。 */
+@Mapper
 public interface SysUserMapper extends BaseMapper<SysUser> {
 
     /** 查询用户被分配的全部角色编码。 */
