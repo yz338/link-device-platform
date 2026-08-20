@@ -6,7 +6,9 @@ import com.devicemanagement.module.device.entity.Device;
 import com.devicemanagement.module.device.vo.DeviceDetailVO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Mapper;
 
+@Mapper
 public interface DeviceMapper extends BaseMapper<Device> {
     DeviceDetailVO selectDetailById(@Param("id") Long id);
 }

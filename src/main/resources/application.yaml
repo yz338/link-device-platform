@@ -12,6 +12,19 @@ spring:
       host: ${DEVICE_REDIS_HOST:localhost}
       port: ${DEVICE_REDIS_PORT:6379}
       database: ${DEVICE_REDIS_DATABASE:0}
+  jackson:
+    # 统一 LocalDateTime 的序列化/反序列化格式
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      # 上传图片的大小限制：单张 5MB，一次请求合计 20MB
+      max-file-size: 5MB
+      max-request-size: 20MB
+  profiles:
+    active: prod
 
 server:
   port: 8080
@@ -27,3 +40,7 @@ security:
     secret: ${DEVICE_JWT_SECRET:device-management-course-jwt-secret-change-in-production-2026}
     expire-seconds: 7200
     refresh-expire-seconds: 604800
+
+app:
+  # 工单处理图片的本地保存目录（相对运行目录），可用环境变量覆盖
+  upload-dir: ${DEVICE_UPLOAD_DIR:./upload}
