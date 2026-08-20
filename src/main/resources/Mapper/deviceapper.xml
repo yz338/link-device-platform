@@ -1,0 +1,30 @@
+<?xml version="1.0"   encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.devicemanagement.module.device.mapper.DeviceMapper">
+
+    <resultMap id="DeviceDetailVOMap" type="com.devicemanagement.module.device.vo.DeviceDetailVO">
+        <id column="id" property="id"/>
+        <result column="device_name" property="deviceName"/>
+        <result column="location" property="location"/>
+        <result column="category_name" property="categoryName"/>
+        <result column="attr_tag" property="attrTag"/>
+        <result column="attr_id" property="attrId"/>
+    </resultMap>
+
+    <select id="selectDetailById" resultMap="DeviceDetailVOMap">
+        SELECT
+            di.id,
+            di.device_name,
+            di.location,
+            dc.category_name,
+            da.attr_tag,
+            da.attr_id
+        FROM device_info di
+                 LEFT JOIN device_category dc ON di.device_category_id = dc.id
+                 LEFT JOIN device_attr da ON da.device_id = di.id
+        WHERE di.id = #{id}
+    </select>
+
+</mapper>

@@ -2,16 +2,23 @@ package com.devicemanagement.module.device.entity;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
  * device_attr_surface_water
  */
 @Data
+@TableName("device_attr_surface_water")
 public class DeviceAttrSurfaceWater implements Serializable {
     /**
      * 属性ID
      */
+    @TableId(value = "id",type = IdType.AUTO)
     private Long id;
 
     /**

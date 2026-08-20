@@ -2,16 +2,22 @@ package com.devicemanagement.module.device.entity;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
  * device_attr_electric_meter
  */
 @Data
+@TableName("device_attr_electric_meter")
 public class DeviceAttrElectricMeter implements Serializable {
     /**
      * 属性ID
      */
+    @TableId(value = "id",type = IdType.AUTO)
     private Long id;
 
     /**

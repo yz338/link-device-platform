@@ -3,6 +3,8 @@ package com.devicemanagement.module.device.entity;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import org.hibernate.validator.constraints.NotEmpty;
@@ -17,7 +19,7 @@ public class DeviceAttrAirStation implements Serializable {
     /**
      * 属性ID
      */
-    @Id
+    @TableId(value = "id",type = IdType.AUTO)
     private Long id;
 
     /**

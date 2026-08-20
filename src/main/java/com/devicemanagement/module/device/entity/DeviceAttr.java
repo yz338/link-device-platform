@@ -1,16 +1,22 @@
 package com.devicemanagement.module.device.entity;
 
 import java.io.Serializable;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
  * device_attr
  */
 @Data
-public class DeviceAttr implements Serializable {
+@TableName(value = "device_attr")
+public class DeviceAttr {
     /**
      * 主键ID
      */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**

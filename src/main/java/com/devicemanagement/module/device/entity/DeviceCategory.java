@@ -2,26 +2,38 @@ package com.devicemanagement.module.device.entity;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.NotBlank;
 
 /**
  * device_category
  */
 @Data
-public class DeviceCategory implements Serializable {
+@AllArgsConstructor
+@NoArgsConstructor
+@TableName(value = "device_category")
+public class DeviceCategory {
     /**
      * 设备类别ID
      */
+    @TableId(value = "id",type = IdType.AUTO)
     private Long id;
 
     /**
      * 设备类别
      */
-    private String category_name;
+    @NotBlank
+    private String categoryName;
 
     /**
      * 类别描述
      */
+    @NotBlank
     private String description;
 
     /**
@@ -32,14 +44,14 @@ public class DeviceCategory implements Serializable {
     /**
      * 创建人
      */
-    private Long create_by;
+    private Long createBy;
 
     /**
      * 创建时间
      */
-    private Date create_time;
+    @TableField(fill = FieldFill.INSERT)
+    private Date createTime;
+    @TableField(fill = FieldFill.UPDATE)
+    private Integer updateTime;
 
-    private Integer update_time;
-
-    private static final long serialVersionUID = 1L;
 }

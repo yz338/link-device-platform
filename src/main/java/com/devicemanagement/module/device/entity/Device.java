@@ -3,6 +3,7 @@ package com.devicemanagement.module.device.entity;
 import java.io.Serializable;
 import java.util.Date;
 
+import cn.afterturn.easypoi.excel.annotation.Excel;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
@@ -21,27 +22,37 @@ public class Device implements Serializable {
     /**
      * 设备名称
      */
-    @TableField(value = "device_name")
+    @Excel(name = "设备名称")
     private String deviceName;
 
     /**
      * 设备类别ID
      */
-    @TableField(value = "device_category_id")
+    @Excel(name = "设备类别ID")
     private Long deviceCategoryId;
 
     /**
-     * 设备属性ID
-     */
-    @TableField(value = "device_attr_id")
-    private Long deviceAttrId;
-
+    * 设备位置
+    */
+    @Excel(name = "设备位置")
     private String location;
-
+    /**
+     * 设备属性
+     * 0离线 1在线
+     */
+    @Excel(name = "设备状态",replace = {"在线_1","离线_0"})
     private Long status;
-    @TableField(value = "creat_time", fill = FieldFill.INSERT)
-    private Date creatTime;
+    /**
+     * 创建时间
+     */
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    @Excel(name = "创建时间", format = "yyyy-MM-dd HH:mm:ss")
+    private Date createTime;
+    /**
+     * 更新时间
+     */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    @Excel(name = "更新时间", format = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
 
 

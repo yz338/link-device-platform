@@ -7,6 +7,7 @@ public class DeviceDTO {
     private Integer pageNum;
     private Integer pageSize;
     private Long deviceCategoryId;
+    private String deviceCategoryName;
     private String deviceName;
     private Long id;
     private String location;
