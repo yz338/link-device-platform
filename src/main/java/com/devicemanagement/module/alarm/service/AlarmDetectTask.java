@@ -81,15 +81,18 @@ public class AlarmDetectTask {
                 // 3. 查设备类别
                 String categoryName = getCategoryName(device.getDeviceCategoryId());
 
-                // 4. 取最新一条报送记录
+                // 4. 离线设备告警（status = 0）
+                if (device.getStatus() == null || device.getStatus() == 0) {
+                    createAlarm(device, "离线", categoryName, null, TYPE_OFFLINE);
+                    continue;
+                }
+
+                // 5. 取最新一条报送记录
                 Object latestRecord = getLatestRecord(attr.getAttrTag(), attr.getAttrId());
                 Date latestTime = getLatestTime(latestRecord);
 
-                // 5. 从未推送过数据 → 跳过（设备未激活，不告警）
-                if (latestTime == null) continue;
-
                 // 6. 5 分钟内没有发数据 → 归为离线
-                if (latestTime.getTime() < fiveMinAgo) {
+                if (latestTime == null || latestTime.getTime() < fiveMinAgo) {
                     createAlarm(device, "离线", categoryName, null, TYPE_OFFLINE);
                     continue;
                 }

@@ -66,6 +66,7 @@ public class DeviceCategoryServiceImpl extends ServiceImpl<DeviceCategoryMapper,
         updateWrapper.eq(DeviceCategory::getId, deviceCategoryDTO.getId());
         updateWrapper.set(DeviceCategory::getCategoryName, deviceCategoryDTO.getCategory_name());
         updateWrapper.set(DeviceCategory::getDescription, deviceCategoryDTO.getDescription());
+        updateWrapper.set(DeviceCategory::getStatus, deviceCategoryDTO.getStatus());
         this.update(updateWrapper);
         return this.getById(deviceCategoryDTO.getId());
     }
