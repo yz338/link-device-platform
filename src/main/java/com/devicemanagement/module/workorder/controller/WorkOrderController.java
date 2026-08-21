@@ -90,4 +90,11 @@ public class WorkOrderController {
         return Result.success(workOrderService.getDetail(orderId));
     }
 
+    /** 工单统计：总数 + 核验未通过次数 */
+    @GetMapping("/stats")
+    @Operation(summary = "工单统计")
+    public Result<com.devicemanagement.module.workorder.vo.WorkOrderStatsVO> stats() {
+        return Result.success(workOrderService.getStats());
+    }
+
 }

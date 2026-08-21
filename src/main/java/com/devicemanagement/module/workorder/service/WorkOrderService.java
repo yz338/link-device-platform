@@ -6,6 +6,7 @@ import com.devicemanagement.module.workorder.bean.WorkOrder;
 import com.devicemanagement.module.workorder.dto.CreateWorkOrderRequest;
 import com.devicemanagement.module.workorder.dto.VerifyWorkOrderRequest;
 import com.devicemanagement.module.workorder.dto.WorkOrderQueryDTO;
+import com.devicemanagement.module.workorder.vo.WorkOrderStatsVO;
 import com.devicemanagement.module.workorder.vo.WorkOrderVO;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,4 +30,6 @@ public interface WorkOrderService extends IService<WorkOrder> {
       void verifyWorkOrder(VerifyWorkOrderRequest request);
       /** 上传处理完成图片（兼容保留，按工单ID保存） */
       List<String> uploadImages(Long orderId, MultipartFile[] images);
+      /** 工单统计 */
+      WorkOrderStatsVO getStats();
 }

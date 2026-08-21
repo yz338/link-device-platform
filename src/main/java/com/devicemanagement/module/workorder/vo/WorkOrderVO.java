@@ -3,7 +3,7 @@ package com.devicemanagement.module.workorder.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -22,7 +22,7 @@ public class WorkOrderVO {
     @Schema(description = "告警内容", example = "设备出现问题")
     private String alarmContent;
     @Schema(description = "截止时间", example = "2025-08-16T10:00:00")
-    private LocalDateTime deadline;
+    private Date deadline;
     /** 工单状态：1 未处理、2 处理中、3 待核验、4 核验完成、5 核验未通过 */
     @Schema(description = "工单状态", example = "1")
     private Integer orderStatus;

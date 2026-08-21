@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
 /** 工单处理图片：每次提交处理记录时上传的照片，对应 process_images 表。 */
 @Data
@@ -27,5 +27,5 @@ public class ProcessImage {
     private String imageUrl;
 
     @Schema(description = "上传时间", example = "2026-08-20 10:00:00")
-    private LocalDateTime createTime;
+    private Date createTime;
 }
