@@ -32,7 +32,7 @@ public class DeviceSubmissionTask {
     /**
      * 用电设备定时推送：每30秒，只推在线设备
      */
-    @Scheduled(fixedRate = 30000)
+    @Scheduled(fixedRate = 120000)
     @Async("deviceTaskExecutor")
     public void pushElectricityData() {
         log.info("开始推送用电监测数据...");
@@ -100,10 +100,7 @@ public class DeviceSubmissionTask {
         log.info("用电监测数据推送完成, 在线设备{}条", count);
     }
 
-    /**
-     * 空气微站定时推送：每60秒，只推在线设备
-     */
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 120000)
     @Async("deviceTaskExecutor")
     public void pushAirStationData() {
         log.info("开始推送空气微站数据...");
@@ -161,9 +158,6 @@ public class DeviceSubmissionTask {
         log.info("空气微站数据推送完成, 在线设备{}条", count);
     }
 
-    /**
-     * 地表水定时推送：每120秒，只推在线设备
-     */
     @Scheduled(fixedRate = 120000)
     @Async("deviceTaskExecutor")
     public void pushSurfaceWaterData() {
@@ -213,7 +207,7 @@ public class DeviceSubmissionTask {
     /**
      * TVOC定时推送：每90秒，只推在线设备
      */
-    @Scheduled(fixedRate = 90000)
+    @Scheduled(fixedRate = 120000)
     @Async("deviceTaskExecutor")
     public void pushTvocData() {
         log.info("开始推送TVOC数据...");
