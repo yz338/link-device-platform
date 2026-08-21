@@ -1,14 +1,17 @@
-package com.devicemanagement.module.device.entity;
+package com.devicemanagement.module.alarm.bean;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
  * alarm_rule_condition
  */
 @Data
+@TableName(value = "alarm_rule_condition")
 public class AlarmRuleCondition implements Serializable {
     /**
      * 条件ID

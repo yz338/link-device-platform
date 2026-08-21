@@ -4,22 +4,27 @@ import cn.afterturn.easypoi.excel.ExcelImportUtil;
 import cn.afterturn.easypoi.excel.entity.ImportParams;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.devicemanagement.module.device.dto.DeviceAttrUpdateDTO;
 import com.devicemanagement.module.device.dto.DeviceCategoryDTO;
 import com.devicemanagement.module.device.dto.DeviceDTO;
 import com.devicemanagement.module.device.entity.*;
+import com.devicemanagement.module.device.entity.pulldata.DeviceSubmissionAirStation;
+import com.devicemanagement.module.device.entity.pulldata.DeviceSubmissionElectricity;
+import com.devicemanagement.module.device.entity.pulldata.DeviceSubmissionSurfaceWater;
+import com.devicemanagement.module.device.entity.pulldata.DeviceSubmissionTvoc;
 import com.devicemanagement.module.device.mapper.*;
 import com.devicemanagement.module.device.service.DeviceCategoryService;
 import com.devicemanagement.module.device.service.DeviceService;
 import com.devicemanagement.module.device.vo.DeviceDetailVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -71,6 +76,7 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void save(DeviceDTO deviceDTO) {
         Device device = new Device();
         BeanUtils.copyProperties(deviceDTO, device);
@@ -79,20 +85,69 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Device updateDevice(DeviceDTO deviceDTO) {
+        if (deviceDTO.getId() == null) {
+            throw new IllegalArgumentException("设备ID不能为空");
+        }
         LambdaUpdateWrapper<Device> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(Device::getId, deviceDTO.getId());
-        LambdaQueryWrapper<DeviceCategory> queryWrapper = new LambdaQueryWrapper<>();
-        DeviceCategory deviceCategory = deviceCategoryService.getOne(queryWrapper.eq(DeviceCategory::getCategoryName, deviceDTO.getDeviceCategoryName()));
-        updateWrapper.set(Device::getDeviceCategoryId, deviceCategory.getId());
-        updateWrapper.set(Device::getDeviceName, deviceDTO.getDeviceName());
-        updateWrapper.set(Device::getLocation, deviceDTO.getLocation());
+        // 类别名校选填，传了才更新
+        if (deviceDTO.getDeviceCategoryName() != null) {
+            LambdaQueryWrapper<DeviceCategory> queryWrapper = new LambdaQueryWrapper<>();
+            DeviceCategory deviceCategory = deviceCategoryService.getOne(
+                    queryWrapper.eq(DeviceCategory::getCategoryName, deviceDTO.getDeviceCategoryName()));
+            if (deviceCategory == null) {
+                throw new IllegalArgumentException("设备类别不存在: " + deviceDTO.getDeviceCategoryName());
+            }
+            updateWrapper.set(Device::getDeviceCategoryId, deviceCategory.getId());
+        }
+        updateWrapper.set(Device::getDeviceName,deviceDTO.getDeviceName());
+        updateWrapper.set(Device::getLocation,deviceDTO.getLocation());
+        updateWrapper.set(Device::getStatus,deviceDTO.getStatus());
         this.update(updateWrapper);
         return this.getById(deviceDTO.getId());
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String deleteDeviceById(Long id) {
+        if (id == null) {
+            return "设备ID不能为空";
+        }
+        Device device = deviceMapper.selectById(id);
+        if (device == null) {
+            return "设备不存在";
+        }
+        DeviceAttr deviceAttr = deviceAttrMapper.selectOne(
+                new LambdaQueryWrapper<DeviceAttr>().eq(DeviceAttr::getDeviceId, id));
+        if (deviceAttr != null) {
+            String attrTag = deviceAttr.getAttrTag();
+            Long attrId   = deviceAttr.getAttrId();
+            switch (attrTag) {
+                case "electric_meter":
+                    electricMeterMapper.deleteById(attrId);
+                    electricityMapper.delete(new LambdaQueryWrapper<DeviceSubmissionElectricity>()
+                            .eq(DeviceSubmissionElectricity::getMn, String.valueOf(attrId)));
+                    break;
+                case "air_station":
+                    airStationMapper.deleteById(attrId);
+                    airStationSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionAirStation>()
+                            .eq(DeviceSubmissionAirStation::getMn, String.valueOf(attrId)));
+                    break;
+                case "surface_water":
+                    surfaceWaterMapper.deleteById(attrId);
+                    surfaceWaterSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionSurfaceWater>()
+                            .eq(DeviceSubmissionSurfaceWater::getMn, String.valueOf(attrId)));
+                    break;
+                case "tvoc":
+                    tvocMapper.deleteById(attrId);
+                    tvocSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionTvoc>()
+                            .eq(DeviceSubmissionTvoc::getMn, String.valueOf(attrId)));
+                    break;
+            }
+            deviceAttrMapper.deleteById(deviceAttr.getId());
+        }
         deviceMapper.deleteById(id);
         return "删除成功";
     }
@@ -143,13 +198,10 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
 
     @Override
     public DeviceDetailVO getDeviceDetail(Long id) {
-        // 1. 查基础信息
         DeviceDetailVO vo = deviceMapper.selectDetailById(id);
         if (vo == null) {
             return null;
         }
-
-        // 2. 根据 attrTag 查具体属性表，组装 attributes
         Map<String, Object> attributes = new LinkedHashMap<>();
         if (vo.getAttrTag() != null && vo.getAttrId() != null) {
             switch (vo.getAttrTag()) {
@@ -168,11 +220,92 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
             }
         }
         vo.setAttributes(attributes);
-
-        // 3. 查最新报送时间
         vo.setLatestSubmitTime(getLatestSubmitTime(vo.getAttrTag(), id));
-
+        List<?> records = new ArrayList<>();
+        if (vo.getAttrTag() != null && vo.getAttrId() != null) {
+            switch (vo.getAttrTag()) {
+                case "electric_meter" :
+                    records = electricityMapper.selectTop10ByMn(String.valueOf(vo.getAttrId()));
+                    break;
+                case "air_station" :
+                    records = airStationSubmissionMapper.selectTop10ByMn(String.valueOf(vo.getAttrId()));
+                    break;
+                case "surface_water":
+                    records = surfaceWaterSubmissionMapper.selectTop10ByMn(String.valueOf(vo.getAttrId()));
+                    break;
+                case "tvoc":
+                    records = tvocSubmissionMapper.selectTop10ByMn(String.valueOf(vo.getAttrId()));
+                    break;
+            }
+            vo.setData(records);
+        }
         return vo;
+    }
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateDeviceAttr(DeviceAttrUpdateDTO dto) {
+        if (dto.getDeviceId() == null || dto.getAttributes() == null || dto.getAttributes().isEmpty()) {
+            return;
+        }
+        DeviceAttr deviceAttr = deviceAttrMapper.selectOne(
+                new LambdaQueryWrapper<DeviceAttr>()
+                        .eq(DeviceAttr::getDeviceId, dto.getDeviceId()));
+        if (deviceAttr == null) {
+            return;
+        }
+        String attrTag = deviceAttr.getAttrTag();
+        Long attrId = deviceAttr.getAttrId();
+
+        switch (attrTag) {
+            case "electric_meter":
+                updateElectricMeter(attrId,dto.getAttributes());
+                break;
+            case "air_station":
+                updateAirStation(attrId, dto.getAttributes());
+                break;
+            case "surface_water":
+                updateSurfaceWater(attrId, dto.getAttributes());
+                break;
+            case "tvoc":
+                updateTvoc(attrId, dto.getAttributes());
+                break;
+        }
+    }
+
+    private void updateElectricMeter(Long attrId, Map<String, Object> attrs) {
+        UpdateWrapper<DeviceAttrElectricMeter> wrapper = new UpdateWrapper<>();
+        wrapper.eq("id", attrId);
+        for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+            wrapper.set(entry.getKey(), entry.getValue());
+        }
+        electricMeterMapper.update(null, wrapper);
+    }
+
+    private void updateAirStation(Long attrId, Map<String, Object> attrs) {
+        UpdateWrapper<DeviceAttrAirStation> wrapper = new UpdateWrapper<>();
+        wrapper.eq("id", attrId);
+        for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+            wrapper.set(entry.getKey(), entry.getValue());
+        }
+        airStationMapper.update(null, wrapper);
+    }
+
+    private void updateSurfaceWater(Long attrId, Map<String, Object> attrs) {
+        UpdateWrapper<DeviceAttrSurfaceWater> wrapper = new UpdateWrapper<>();
+        wrapper.eq("id", attrId);
+        for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+            wrapper.set(entry.getKey(), entry.getValue());
+        }
+        surfaceWaterMapper.update(null, wrapper);
+    }
+
+    private void updateTvoc(Long attrId, Map<String, Object> attrs) {
+        UpdateWrapper<DeviceAttrTvoc> wrapper = new UpdateWrapper<>();
+        wrapper.eq("id", attrId);
+        for (Map.Entry<String, Object> entry : attrs.entrySet()) {
+            wrapper.set(entry.getKey(), entry.getValue());
+        }
+        tvocMapper.update(null, wrapper);
     }
     private void loadElectricMeterAttr(Long attrId, Map<String, Object> attrs) {
         DeviceAttrElectricMeter attr = electricMeterMapper.selectById(attrId);
@@ -269,17 +402,16 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
             return null;
         }
 
-        // 2. 用 attr_id 作为 mn 值，查报送表的最新时间
         Long mn = deviceAttr.getAttrId();
         switch (attrTag) {
             case "electric_meter":
-                return electricityMapper.selectLatestSubmitTime(mn);
+                return electricityMapper.selectLatestSubmitTime(String.valueOf(mn));
             case "air_station":
-                return airStationSubmissionMapper.selectLatestSubmitTime(mn);
+                return airStationSubmissionMapper.selectLatestSubmitTime(String.valueOf(mn));
             case "surface_water":
-                return surfaceWaterSubmissionMapper.selectLatestSubmitTime(mn);
+                return surfaceWaterSubmissionMapper.selectLatestSubmitTime(String.valueOf(mn));
             case "tvoc":
-                return tvocSubmissionMapper.selectLatestSubmitTime(mn);
+                return tvocSubmissionMapper.selectLatestSubmitTime(String.valueOf(mn));
             default:
                 return null;
         }
@@ -300,24 +432,91 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
     /**
      * 在对应属性表创建空记录，返回主键 ID
      */
+    /**
+     * 在对应属性表创建带默认值的记录，返回主键 ID
+     */
     private Long createEmptyAttrRecord(String attrTag) {
         switch (attrTag) {
             case "electric_meter":
                 DeviceAttrElectricMeter electricMeter = new DeviceAttrElectricMeter();
-                electricMeterMapper.insertEmpty(electricMeter);
+                electricMeter.setCt_ratio(new BigDecimal("20"));
+                electricMeter.setQ1eq(new BigDecimal("0"));
+                electricMeter.setQ2eq(new BigDecimal("0"));
+                electricMeter.setQ3eq(new BigDecimal("0"));
+                electricMeter.setQ4eq(new BigDecimal("0"));
+                electricMeter.setUab(new BigDecimal("380"));
+                electricMeter.setUbc(new BigDecimal("380"));
+                electricMeter.setUca(new BigDecimal("380"));
+                electricMeter.setUa(new BigDecimal("220"));
+                electricMeter.setUb(new BigDecimal("220"));
+                electricMeter.setUc(new BigDecimal("220"));
+                electricMeter.setIa(new BigDecimal("0"));
+                electricMeter.setIb(new BigDecimal("0"));
+                electricMeter.setIc(new BigDecimal("0"));
+                electricMeter.setPt(new BigDecimal("0"));
+                electricMeter.setPa(new BigDecimal("0"));
+                electricMeter.setPb(new BigDecimal("0"));
+                electricMeter.setPc(new BigDecimal("0"));
+                electricMeter.setQt(new BigDecimal("0"));
+                electricMeter.setQa(new BigDecimal("0"));
+                electricMeter.setQb(new BigDecimal("0"));
+                electricMeter.setQc(new BigDecimal("0"));
+                electricMeter.setPft(new BigDecimal("0.9"));
+                electricMeter.setPfa(new BigDecimal("0.9"));
+                electricMeter.setPfb(new BigDecimal("0.9"));
+                electricMeter.setPfc(new BigDecimal("0.9"));
+                electricMeter.setFreq(new BigDecimal("50"));
+                electricMeterMapper.insert(electricMeter);
                 return electricMeter.getId();
             case "air_station":
                 DeviceAttrAirStation airStation = new DeviceAttrAirStation();
-                airStationMapper.insertEmpty(airStation);
+                airStation.setSo2Min(new BigDecimal("0.02"));
+                airStation.setSo2Avg(new BigDecimal("0.03"));
+                airStation.setSo2Max(new BigDecimal("0.05"));
+                airStation.setNoMin(new BigDecimal("0.01"));
+                airStation.setNoAvg(new BigDecimal("0.02"));
+                airStation.setNoMax(new BigDecimal("0.03"));
+                airStation.setNo2Min(new BigDecimal("0.02"));
+                airStation.setNo2Avg(new BigDecimal("0.03"));
+                airStation.setNo2Max(new BigDecimal("0.04"));
+                airStation.setNoxMin(new BigDecimal("0.03"));
+                airStation.setNoxAvg(new BigDecimal("0.05"));
+                airStation.setNoxMax(new BigDecimal("0.07"));
+                airStation.setCoMin(new BigDecimal("0.5"));
+                airStation.setCoAvg(new BigDecimal("1.0"));
+                airStation.setCoMax(new BigDecimal("2.0"));
+                airStation.setPm10Min(new BigDecimal("20"));
+                airStation.setPm10Avg(new BigDecimal("35"));
+                airStation.setPm10Max(new BigDecimal("50"));
+                airStation.setPm25Min(new BigDecimal("10"));
+                airStation.setPm25Avg(new BigDecimal("20"));
+                airStation.setPm25Max(new BigDecimal("35"));
+                airStationMapper.insert(airStation);
                 return airStation.getId();
+
             case "surface_water":
                 DeviceAttrSurfaceWater surfaceWater = new DeviceAttrSurfaceWater();
-                surfaceWaterMapper.insertEmpty(surfaceWater);
+                surfaceWater.setWater_temperature(new BigDecimal("15"));
+                surfaceWater.setPh_value(new BigDecimal("7"));
+                surfaceWater.setDissolved_oxygen(new BigDecimal("8"));
+                surfaceWater.setConductivity(new BigDecimal("500"));
+                surfaceWater.setPermanganate_index(new BigDecimal("4"));
+                surfaceWater.setAmmonia_nitrogen(new BigDecimal("0.5"));
+                surfaceWater.setTotal_phosphorus(new BigDecimal("0.1"));
+                surfaceWater.setTotal_nitrogen(new BigDecimal("1.0"));
+                surfaceWaterMapper.insert(surfaceWater);
                 return surfaceWater.getId();
+
             case "tvoc":
                 DeviceAttrTvoc tvoc = new DeviceAttrTvoc();
-                tvocMapper.insertEmpty(tvoc);
+                tvoc.setTemperature(new BigDecimal("25"));
+                tvoc.setHumidity(new BigDecimal("50"));
+                tvoc.setAir_pressure(new BigDecimal("101.3"));
+                tvoc.setWind_speed(new BigDecimal("0.5"));
+                tvoc.setWind_direction("东风");
+                tvocMapper.insert(tvoc);
                 return tvoc.getId();
+
             default:
                 return null;
         }
@@ -329,8 +528,6 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         if (device.getDeviceCategoryId() == null) {
             return;
         }
-
-        // 1. 查设备类别，确定 attrTag
         DeviceCategory category = deviceCategoryMapper.selectById(device.getDeviceCategoryId());
         if (category == null) {
             return;
@@ -339,14 +536,10 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         if (attrTag == null) {
             return;
         }
-
-        // 2. 在对应属性表创建空记录
         Long attrId = createEmptyAttrRecord(attrTag);
         if (attrId == null) {
             return;
         }
-
-        // 3. 创建 device_attr 关联记录
         DeviceAttr deviceAttr = new DeviceAttr();
         deviceAttr.setDeviceId(device.getId());
         deviceAttr.setAttrTag(attrTag);
