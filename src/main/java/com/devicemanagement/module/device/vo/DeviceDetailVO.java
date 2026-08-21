@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -37,4 +38,8 @@ public class DeviceDetailVO {
     @Schema(description = "最新报送时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date latestSubmitTime;
+
+    // 设备推送数据
+    @Schema(description = "设备推送数据（最新前10条）")
+    private List<?> data;
 }

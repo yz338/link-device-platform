@@ -61,6 +61,6 @@ public class DeviceCategory {
     private Date createTime;
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新时间")
-    private Integer updateTime;
+    private Date updateTime;
 
 }

@@ -69,8 +69,8 @@ public class DeviceController {
     @Operation(summary = "Excel批量导入设备", description = "上传Excel文件批量导入设备，格式需与模板一致")
     public Result<String> importExcel(
             @Parameter(description = "Excel文件", required = true) @RequestParam("file") MultipartFile file) throws Exception {
-        deviceService.importExcel(file);
-        return Result.success("导入成功");
+        String message = deviceService.importExcel(file);
+        return Result.success(message);
     }
 
     @GetMapping("/Detail")

@@ -44,7 +44,7 @@ public class DeviceCategoryDTO {
     private Date create_time;
 
     @Schema(description = "更新时间")
-    private Integer update_time;
+    private Date update_time;
 
     private static final long serialVersionUID = 1L;
 

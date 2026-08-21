@@ -16,11 +16,15 @@ public class DeviceCategoryFillConfig implements MetaObjectHandler {
                 "createTime",
                 Date.class,
                 date);
+        this.strictInsertFill(metaObject
+                , "updateTime"
+                , Date.class
+                , date);
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
         Date date = new Date();
-        this.strictUpdateFill(metaObject,"createTime",Date.class,date);
+        this.strictUpdateFill(metaObject,"updateTime",Date.class,date);
     }
 }
