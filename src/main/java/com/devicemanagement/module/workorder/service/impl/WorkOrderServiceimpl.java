@@ -357,6 +357,14 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         return paths;
     }
 
+    @Override
+    public WorkOrderStatsVO getStats() {
+        WorkOrderStatsVO vo = new WorkOrderStatsVO();
+        vo.setTotalOrders(workOrderMapper.selectCount(null));
+        vo.setFailedVerificationCount(verificationRecordsMapper.countByVerificationResult(0));
+        return vo;
+    }
+
     /** 从原始文件名提取小写扩展名，没有扩展名返回空串。 */
     private String resolveExtension(String filename) {
         if (filename == null) {
@@ -450,14 +458,6 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         }
         vo.setImages(images);
 
-        return vo;
-    }
-
-    @Override
-    public WorkOrderStatsVO getStats() {
-        WorkOrderStatsVO vo = new WorkOrderStatsVO();
-        vo.setTotalOrders(workOrderMapper.selectCount(null));
-        vo.setFailedVerificationCount(verificationRecordsMapper.countByVerificationResult(0));
         return vo;
     }
 
