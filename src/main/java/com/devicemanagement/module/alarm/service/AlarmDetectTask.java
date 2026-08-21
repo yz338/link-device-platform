@@ -72,11 +72,6 @@ public class AlarmDetectTask {
                         new LambdaQueryWrapper<DeviceAttr>()
                                 .eq(DeviceAttr::getDeviceId, device.getId()));
                 if (attr == null) continue;
-                // ↓↓↓ 只处理指标选上的设备
-                Long hasRelation = indicatorDeviceMapper.selectCount(
-                        new LambdaQueryWrapper<IndicatorDevice>()
-                                .eq(IndicatorDevice::getDeviceId, device.getId()));
-                if (hasRelation == null || hasRelation == 0) continue;
 
                 // 3. 查设备类别
                 String categoryName = getCategoryName(device.getDeviceCategoryId());
