@@ -8,6 +8,8 @@ import lombok.Data;
 public class AlarmIndicatorVO {
     @Schema(description = "告警指标ID")
     private Long id;
+    @Schema(description = "告警指标名称")
+    private String indicatorName;
     @Schema(description = "设备名称")
     private String deviceName;
     @Schema(description = "指标描述")
