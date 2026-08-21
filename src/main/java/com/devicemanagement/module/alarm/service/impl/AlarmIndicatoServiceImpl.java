@@ -156,7 +156,7 @@ public class AlarmIndicatoServiceImpl extends ServiceImpl<AlarmIndicatorMapper, 
         Long processingCount = alarmMapper.selectCount(
                 new LambdaQueryWrapper<Alarm>()
                         .eq(Alarm::getAlarmIndicatorId, id)
-                        .eq(Alarm::getStatus, 2));
+                        .eq(Alarm::getStatus, 1));
         if (processingCount != null && processingCount > 0) {
             return "该指标下存在 " + processingCount + " 条处理中的告警工单，请先完成处理后再删除";
         }

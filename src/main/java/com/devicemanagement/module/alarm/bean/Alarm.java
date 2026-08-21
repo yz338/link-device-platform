@@ -9,15 +9,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.stereotype.Component;
-
 /**
  * alarm
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Component
 @TableName("alarm")
 @Schema(description = "告警对象")
 public class Alarm {
@@ -61,7 +58,7 @@ public class Alarm {
     /**
      * 状态
      */
-    @Schema(description = "状态：1=未处理 2=处理中 3=已处理", example = "1")
+    @Schema(description = "状态：0=未处理 1=处理中 2=已处理", example = "0")
     private Integer status;
 
     /**

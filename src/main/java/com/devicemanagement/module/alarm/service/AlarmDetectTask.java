@@ -81,18 +81,15 @@ public class AlarmDetectTask {
                 // 3. 查设备类别
                 String categoryName = getCategoryName(device.getDeviceCategoryId());
 
-                // 4. 离线设备告警（status = 0）
-                if (device.getStatus() == null || device.getStatus() == 0) {
-                    createAlarm(device, "离线", categoryName, null, TYPE_OFFLINE);
-                    continue;
-                }
-
-                // 5. 取最新一条报送记录
+                // 4. 取最新一条报送记录
                 Object latestRecord = getLatestRecord(attr.getAttrTag(), attr.getAttrId());
                 Date latestTime = getLatestTime(latestRecord);
 
+                // 5. 从未推送过数据 → 跳过（设备未激活，不告警）
+                if (latestTime == null) continue;
+
                 // 6. 5 分钟内没有发数据 → 归为离线
-                if (latestTime == null || latestTime.getTime() < fiveMinAgo) {
+                if (latestTime.getTime() < fiveMinAgo) {
                     createAlarm(device, "离线", categoryName, null, TYPE_OFFLINE);
                     continue;
                 }
@@ -277,15 +274,16 @@ public class AlarmDetectTask {
     // ============================================================
 
     /**
-     * 生成告警记录（同设备 + 同内容，当天只生成一条，避免重复）
+     * 生成告警记录（同设备 + 同内容 + 同类型，存在未处理/处理中的不重复生成）
      */
     private void createAlarm(Device device, String content, String categoryName,
                              Long indicatorId, int type) {
-        Date todayStart = getTodayStart();
+        // 只要有未处理(0)或处理中(1)的同告警，就不重复生成
         Long count = alarmMapper.selectCount(new LambdaQueryWrapper<Alarm>()
                 .eq(Alarm::getDeviceId, device.getId())
                 .eq(Alarm::getAlarmContent, content)
-                .ge(Alarm::getAlarmTime, todayStart));
+                .eq(Alarm::getType, type)
+                .in(Alarm::getStatus, 0, 1));
         if (count != null && count > 0) {
             return;
         }
@@ -296,7 +294,7 @@ public class AlarmDetectTask {
         alarm.setAlarmContent(content);
         alarm.setDeviceCategory(categoryName);
         alarm.setAlarmTime(new Date());
-        alarm.setStatus(1);
+        alarm.setStatus(0);
         alarm.setType(type);
         if (indicatorId != null) {
             alarm.setAlarmIndicatorId(indicatorId);
@@ -304,12 +302,4 @@ public class AlarmDetectTask {
         alarmMapper.insert(alarm);
     }
 
-    private Date getTodayStart() {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        return cal.getTime();
-    }
 }

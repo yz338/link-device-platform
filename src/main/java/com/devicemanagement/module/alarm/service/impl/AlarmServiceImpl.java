@@ -132,14 +132,14 @@ public class AlarmServiceImpl extends ServiceImpl<AlarmMapper, Alarm> implements
     @Override
     public Long countUnhand() {
         LambdaQueryWrapper<Alarm> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Alarm::getStatus, 1);
+        wrapper.eq(Alarm::getStatus, 0);
         return this.count(wrapper);
     }
 
     @Override
     public Long countHand() {
         LambdaQueryWrapper<Alarm> wrapper=new LambdaQueryWrapper<>();
-        wrapper.eq(Alarm::getStatus, 3);
+        wrapper.eq(Alarm::getStatus, 2);
         return this.count(wrapper);
     }
 }
