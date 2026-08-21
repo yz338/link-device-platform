@@ -6,7 +6,7 @@ import lombok.Data;
 import javax.validation.constraints.Future;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Data
 public class CreateWorkOrderRequest {
@@ -24,7 +24,7 @@ public class CreateWorkOrderRequest {
 
     @Future(message = "截止时间必须晚于当前时间")
     @Schema(description = "截止时间", example = "2026-08-20 10:53:00")
-    private LocalDateTime deadline;
+    private Date deadline;
 
     @NotBlank(message = "工单描述不能为空")
     @Schema(description = "工单描述", example = "xx设备报警,请及时处理")

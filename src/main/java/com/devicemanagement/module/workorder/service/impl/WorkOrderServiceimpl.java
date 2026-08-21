@@ -5,14 +5,16 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.devicemanagement.common.exception.BusinessException;
+import com.devicemanagement.framework.config.WebMvcConfig;
 import com.devicemanagement.module.device.entity.Alarm;
 import com.devicemanagement.module.device.entity.Device;
 import com.devicemanagement.module.device.mapper.AlarmMapper;
 import com.devicemanagement.module.device.mapper.DeviceMapper;
+import com.devicemanagement.module.notification.service.NotificationService;
 import com.devicemanagement.module.system.entity.SysUser;
 import com.devicemanagement.module.system.mapper.SysUserMapper;
-import com.devicemanagement.module.workorder.bean.ProcessRecord;
 import com.devicemanagement.module.workorder.bean.ProcessImage;
+import com.devicemanagement.module.workorder.bean.ProcessRecord;
 import com.devicemanagement.module.workorder.bean.VerificationRecords;
 import com.devicemanagement.module.workorder.bean.WorkOrder;
 import com.devicemanagement.module.workorder.dto.CreateWorkOrderRequest;
@@ -24,9 +26,10 @@ import com.devicemanagement.module.workorder.mapper.ProcessRecordMapper;
 import com.devicemanagement.module.workorder.mapper.VerificationRecordsMapper;
 import com.devicemanagement.module.workorder.mapper.WorkOrderMapper;
 import com.devicemanagement.module.workorder.service.WorkOrderService;
+import com.devicemanagement.module.workorder.vo.WorkOrderStatsVO;
 import com.devicemanagement.module.workorder.vo.WorkOrderVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,15 +37,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 
+@Slf4j
 @Service
 public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder> implements WorkOrderService {
 
@@ -60,10 +58,10 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
     private VerificationRecordsMapper verificationRecordsMapper;
     @Autowired
     private ProcessImageMapper processImageMapper;
-
-    /** 上传文件保存根目录，默认项目运行目录下的 upload 文件夹 */
-    @Value("${app.upload-dir:./upload}")
-    private String uploadDir;
+    @Autowired
+    private NotificationService notificationService;
+    @Autowired
+    private WebMvcConfig webMvcConfig;
 
     /** 允许的图片扩展名 */
     private static final Set<String> ALLOWED_EXTENSIONS =
@@ -87,10 +85,34 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         workOrder.setOrderDescription(request.getOrderDescription());
         workOrder.setUserId(request.getUserId());
         workOrder.setOrderStatus(WorkOrderStatus.UNPROCESSED.getCode());
-        workOrder.setCreateTime(LocalDateTime.now());
-        workOrder.setUpdateTime(LocalDateTime.now());
+        workOrder.setCreateTime(new Date());
+        workOrder.setUpdateTime(new Date());
         workOrder.setDeadline(request.getDeadline());
         workOrderMapper.insert(workOrder);
+
+        // 下发工单时，告警状态置为处理中(1)，并填充处理人
+        alarm.setStatus(1);
+        if (request.getUserId() != null) {
+            SysUser handler = sysUserMapper.selectById(request.getUserId());
+            if (handler != null) {
+                alarm.setHandler(handler.getNickname());
+            }
+        }
+        alarmMapper.updateById(alarm);
+
+        // 场景1：下发工单，通知处理人
+        if (request.getUserId() != null) {
+            try {
+                notificationService.createNotification(
+                        request.getUserId(), null,
+                        "新工单待处理",
+                        "您有新的待处理工单：" + request.getOrderTitle()
+                                + "，截止时间：" + request.getDeadline()
+                );
+            } catch (Exception e) {
+                log.warn("新工单通知发送失败，orderId={}", workOrder.getOrderId(), e);
+            }
+        }
     }
 
     @Override
@@ -99,16 +121,29 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         if (workOrder == null) {
             throw new BusinessException("工单不存在");
         }
-        if (workOrder.getOrderStatus() == null
-                || workOrder.getOrderStatus() != WorkOrderStatus.UNPROCESSED.getCode()) {
-            throw new BusinessException("未处理的工单才能修改处理人");
+        Integer status = workOrder.getOrderStatus();
+        if (status == null || (status != WorkOrderStatus.UNPROCESSED.getCode()
+                && status != WorkOrderStatus.VERIFY_REJECTED.getCode())) {
+            throw new BusinessException("未处理或核验未通过的工单才能修改处理人");
         }
         if (userId != null && userId.equals(workOrder.getUserId())) {
             throw new BusinessException("处理人不能与原处理人相同");
         }
         workOrder.setUserId(userId);
-        workOrder.setUpdateTime(LocalDateTime.now());
+        workOrder.setUpdateTime(new Date());
         workOrderMapper.updateById(workOrder);
+
+        // 同步更新告警的处理人
+        if (workOrder.getAlarmId() != null && userId != null) {
+            Alarm alarm = alarmMapper.selectById(workOrder.getAlarmId());
+            if (alarm != null) {
+                SysUser handler = sysUserMapper.selectById(userId);
+                if (handler != null) {
+                    alarm.setHandler(handler.getNickname());
+                    alarmMapper.updateById(alarm);
+                }
+            }
+        }
     }
 
     @Override
@@ -125,14 +160,19 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         }
         // 工单状态流转：未处理/核验未通过 -> 处理中
         wo.setOrderStatus(WorkOrderStatus.PROCESSING.getCode());
-        wo.setUpdateTime(LocalDateTime.now());
+        wo.setUpdateTime(new Date());
         workOrderMapper.updateById(wo);
-        // 联动告警置为处理中
-        if (wo.getAlarmId() != null) {
-            Alarm alarm = alarmMapper.selectById(wo.getAlarmId());
-            if (alarm != null) {
-                alarm.setStatus(2);
-                alarmMapper.updateById(alarm);
+
+        // 场景2：工单开始处理，通知处理人
+        if (wo.getUserId() != null) {
+            try {
+                notificationService.createNotification(
+                        wo.getUserId(), null,
+                        "工单开始处理",
+                        "工单「" + wo.getOrderTitle() + "」已开始处理"
+                );
+            } catch (Exception e) {
+                log.warn("工单开始处理通知发送失败，orderId={}", orderId, e);
             }
         }
     }
@@ -148,12 +188,9 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         if (status == null || status != WorkOrderStatus.PROCESSING.getCode()) {
             throw new BusinessException("只有处理中的工单才能提交处理结果");
         }
-        // 处理图片非必填，但最多 9 张
         if (images != null && images.length > MAX_IMAGE_COUNT) {
             throw new BusinessException("最多上传 " + MAX_IMAGE_COUNT + " 张图片");
         }
-
-        // 写入处理记录
         ProcessRecord pr = new ProcessRecord();
         pr.setOrderId(wo.getOrderId().intValue());
         if (wo.getUserId() != null) {
@@ -161,12 +198,11 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         }
         pr.setMethod(method);
         pr.setProcessDescription(processDescription);
-        pr.setFinishTime(LocalDateTime.now());
+        pr.setFinishTime(new Date());
         processRecordMapper.insert(pr);
 
-        // 保存图片到本地 + 写入 process_images，关联到本次处理记录
         if (images != null && images.length > 0) {
-            LocalDateTime now = LocalDateTime.now();
+            Date now = new Date();
             for (MultipartFile image : images) {
                 if (image == null || image.isEmpty()) {
                     continue;
@@ -179,7 +215,7 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
                 String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
                 String path;
                 try {
-                    Path dir = Paths.get(uploadDir, "workorder");
+                    Path dir = webMvcConfig.getAbsUploadPath().resolve("workorder");
                     Files.createDirectories(dir);
                     image.transferTo(dir.resolve(filename).toFile());
                     path = "/upload/workorder/" + filename;
@@ -196,13 +232,13 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
 
         // 工单状态流转：处理中 -> 待核验
         wo.setOrderStatus(WorkOrderStatus.PENDING_VERIFY.getCode());
-        wo.setUpdateTime(LocalDateTime.now());
+        wo.setUpdateTime(new Date());
         workOrderMapper.updateById(wo);
-        // 联动更新告警为已处理，并记录处理人
+        // 联动更新告警为已处理(2)，并记录处理人
         if (wo.getAlarmId() != null) {
             Alarm alarm = alarmMapper.selectById(wo.getAlarmId());
             if (alarm != null) {
-                alarm.setStatus(1);
+                alarm.setStatus(2);
                 if (wo.getUserId() != null) {
                     SysUser handler = sysUserMapper.selectById(wo.getUserId());
                     if (handler != null) {
@@ -210,6 +246,19 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
                     }
                 }
                 alarmMapper.updateById(alarm);
+            }
+        }
+
+        // 场景3：提交处理结果，通知处理人工单待核验
+        if (wo.getUserId() != null) {
+            try {
+                notificationService.createNotification(
+                        wo.getUserId(), null,
+                        "工单处理完成",
+                        "工单「" + wo.getOrderTitle() + "」处理完成，待核验"
+                );
+            } catch (Exception e) {
+                log.warn("工单处理完成通知发送失败，orderId={}", orderId, e);
             }
         }
     }
@@ -225,14 +274,41 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
                 || wo.getOrderStatus() != WorkOrderStatus.PENDING_VERIFY.getCode()) {
             throw new BusinessException("只有待核验的工单才能核验");
         }
-        // 写入核验记录
         VerificationRecords vr = new VerificationRecords();
         vr.setOrderId(wo.getOrderId().intValue());
         vr.setVerificationResult(request.getVerificationResult());
         vr.setVerificationDescription(request.getVerificationDescription());
-        vr.setVerificationTime(LocalDateTime.now());
-        wo.setUpdateTime(LocalDateTime.now());
+        vr.setVerificationTime(new Date());
+        verificationRecordsMapper.insert(vr);
+        // 核验结果：1=通过 -> 核验完成；0=未通过 -> 核验未通过（打回给处理人重新处理）
+        boolean passed = Integer.valueOf(1).equals(request.getVerificationResult());
+        wo.setOrderStatus(passed
+                ? WorkOrderStatus.VERIFIED.getCode()
+                : WorkOrderStatus.VERIFY_REJECTED.getCode());
+        wo.setUpdateTime(new Date());
         workOrderMapper.updateById(wo);
+
+        if (wo.getUserId() != null) {
+            try {
+                if (passed) {
+                    notificationService.createNotification(
+                            wo.getUserId(), null,
+                            "核验通过",
+                            "工单「" + wo.getOrderTitle() + "」核验已通过"
+                    );
+                } else {
+                    notificationService.createNotification(
+                            wo.getUserId(), null,
+                            "核验未通过",
+                            "工单「" + wo.getOrderTitle() + "」核验未通过，原因："
+                                    + request.getVerificationDescription() + "，请重新处理"
+                    );
+                }
+            } catch (Exception e) {
+                // 通知创建失败不影响工单状态更新，避免因 Redis/DB 偶发问题导致核验结果丢失
+                log.warn("核验通知发送失败，orderId={}", wo.getOrderId(), e);
+            }
+        }
     }
 
     @Override
@@ -249,7 +325,7 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
             throw new BusinessException("最多上传 " + MAX_IMAGE_COUNT + " 张图片");
         }
         List<String> paths = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+        Date now = new Date();
         for (MultipartFile image : images) {
             if (image == null || image.isEmpty()) {
                 continue;
@@ -262,7 +338,7 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
             String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
             String path;
             try {
-                Path dir = Paths.get(uploadDir, "workorder");
+                Path dir = webMvcConfig.getAbsUploadPath().resolve("workorder");
                 Files.createDirectories(dir);
                 image.transferTo(dir.resolve(filename).toFile());
                 path = "/upload/workorder/" + filename;
@@ -374,6 +450,14 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         }
         vo.setImages(images);
 
+        return vo;
+    }
+
+    @Override
+    public WorkOrderStatsVO getStats() {
+        WorkOrderStatsVO vo = new WorkOrderStatsVO();
+        vo.setTotalOrders(workOrderMapper.selectCount(null));
+        vo.setFailedVerificationCount(verificationRecordsMapper.countByVerificationResult(0));
         return vo;
     }
 

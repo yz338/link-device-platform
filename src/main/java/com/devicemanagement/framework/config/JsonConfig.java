@@ -3,6 +3,7 @@ package com.devicemanagement.framework.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 /**
  * Spring Boot 4 通过 spring-boot-starter-jackson 自动注册 MVC JSON 转换器。
@@ -11,10 +12,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class JsonConfig {
 
-    /** 创建供异常处理器与 MVC 共用的 JSON 序列化器。 */
+    /** 创建供异常处理器与 MVC 共用的 JSON 序列化器，复用 Spring Boot 的 Jackson 配置（含 date-format 等）。 */
     @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper().findAndRegisterModules();
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+        return builder.createXmlMapper(false).build();
     }
 
 }

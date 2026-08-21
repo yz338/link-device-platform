@@ -6,8 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Data
 @TableName("work_order")
@@ -28,9 +27,9 @@ public class WorkOrder {
     @Schema(description = "工单状态", example = "1")
     private Integer orderStatus;
     @Schema(description = "创建时间", example = "2026-08-20 10:53:00")
-    private LocalDateTime createTime;
+    private Date createTime;
     @Schema(description = "截止时间", example = "2026-08-20 10:53:00")
-    private LocalDateTime deadline;
+    private Date deadline;
     @Schema(description = "更新时间", example = "2026-08-20 10:53:00")
-    private LocalDateTime updateTime;
+    private Date updateTime;
 }

@@ -1,12 +1,12 @@
 package com.devicemanagement.module.workorder.bean;
 
-import java.time.LocalDateTime;
-
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.util.Date;
 
 /**
  * process_record
@@ -50,6 +50,6 @@ public class ProcessRecord {
      * 工单处理完成时间
      */
     @Schema(description = "工单处理完成时间", example = "2026-08-20 10:53:00")
-    private LocalDateTime finishTime;
+    private Date finishTime;
 
 }

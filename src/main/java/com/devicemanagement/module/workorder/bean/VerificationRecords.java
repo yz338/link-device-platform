@@ -1,13 +1,12 @@
 package com.devicemanagement.module.workorder.bean;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
-
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.util.Date;
 
 /**
  * verification_records
@@ -44,6 +43,6 @@ public class VerificationRecords{
      * 核验时间
      */
     @Schema(description = "核验时间", example = "2026-08-20 10:53:00")
-    private LocalDateTime verificationTime;
+    private Date verificationTime;
 
 }
