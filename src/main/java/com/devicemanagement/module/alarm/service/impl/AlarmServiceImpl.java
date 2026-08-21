@@ -103,7 +103,7 @@ public class AlarmServiceImpl extends ServiceImpl<AlarmMapper, Alarm> implements
         Page<Alarm> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         // 3. 转 VO，关联查设备信息
         List<AlarmDetailVO> records = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         for (Alarm alarm : page.getRecords()) {
             AlarmDetailVO vo = new AlarmDetailVO();
             vo.setId(alarm.getId());
