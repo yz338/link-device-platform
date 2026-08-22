@@ -271,12 +271,111 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
                 break;
         }
     }
+    /** 各属性表允许更新的字段白名单 + 范围 [min, max]，null 表示不限制 */
+    private static final Map<String, double[]> ELECTRIC_METER_RULES = new HashMap<>();
+    private static final Map<String, double[]> AIR_STATION_RULES = new HashMap<>();
+    private static final Map<String, double[]> SURFACE_WATER_RULES = new HashMap<>();
+    private static final Map<String, double[]> TVOC_RULES = new HashMap<>();
+
+    static {
+        // 电表：电压 0~600V，电流 0~5000A，功率因数 -1~1，频率 45~65Hz，电能/功率 >=0
+        ELECTRIC_METER_RULES.put("ct_ratio", new double[]{0.01, 9999});
+        ELECTRIC_METER_RULES.put("q1eq", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("q2eq", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("q3eq", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("q4eq", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("uab", new double[]{0, 600});
+        ELECTRIC_METER_RULES.put("ubc", new double[]{0, 600});
+        ELECTRIC_METER_RULES.put("uca", new double[]{0, 600});
+        ELECTRIC_METER_RULES.put("ua", new double[]{0, 400});
+        ELECTRIC_METER_RULES.put("ub", new double[]{0, 400});
+        ELECTRIC_METER_RULES.put("uc", new double[]{0, 400});
+        ELECTRIC_METER_RULES.put("ia", new double[]{0, 5000});
+        ELECTRIC_METER_RULES.put("ib", new double[]{0, 5000});
+        ELECTRIC_METER_RULES.put("ic", new double[]{0, 5000});
+        ELECTRIC_METER_RULES.put("pt", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("pa", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("pb", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("pc", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("qt", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("qa", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("qb", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("qc", new double[]{0, Double.MAX_VALUE});
+        ELECTRIC_METER_RULES.put("pft", new double[]{-1, 1});
+        ELECTRIC_METER_RULES.put("pfa", new double[]{-1, 1});
+        ELECTRIC_METER_RULES.put("pfb", new double[]{-1, 1});
+        ELECTRIC_METER_RULES.put("pfc", new double[]{-1, 1});
+        ELECTRIC_METER_RULES.put("freq", new double[]{45, 65});
+
+        // 空气站：各污染物浓度 >=0
+        for (String f : new String[]{"so2Min","so2Avg","so2Max","noMin","noAvg","noMax",
+                "no2Min","no2Avg","no2Max","noxMin","noxAvg","noxMax",
+                "coMin","coAvg","coMax","pm10Min","pm10Avg","pm10Max",
+                "pm25Min","pm25Avg","pm25Max"}) {
+            AIR_STATION_RULES.put(f, new double[]{0, Double.MAX_VALUE});
+        }
+
+        // 地表水：温度 0~100，pH 0~14，溶解氧 0~20，电导率 0~10000，其余 >=0
+        SURFACE_WATER_RULES.put("water_temperature", new double[]{0, 100});
+        SURFACE_WATER_RULES.put("ph_value", new double[]{0, 14});
+        SURFACE_WATER_RULES.put("dissolved_oxygen", new double[]{0, 20});
+        SURFACE_WATER_RULES.put("conductivity", new double[]{0, 10000});
+        SURFACE_WATER_RULES.put("permanganate_index", new double[]{0, Double.MAX_VALUE});
+        SURFACE_WATER_RULES.put("ammonia_nitrogen", new double[]{0, Double.MAX_VALUE});
+        SURFACE_WATER_RULES.put("total_phosphorus", new double[]{0, Double.MAX_VALUE});
+        SURFACE_WATER_RULES.put("total_nitrogen", new double[]{0, Double.MAX_VALUE});
+
+        // TVOC：温度 -50~100，湿度 0~100，气压 300~1200，风速 0~100
+        TVOC_RULES.put("temperature", new double[]{-50, 100});
+        TVOC_RULES.put("humidity", new double[]{0, 100});
+        TVOC_RULES.put("air_pressure", new double[]{300, 1200});
+        TVOC_RULES.put("wind_speed", new double[]{0, 100});
+    }
+
+    /**
+     * 校验单个属性值：非空 + 数值范围
+     * @param field 字段名（DB列名）
+     * @param value 前端传入的值
+     * @param rules 该实体类型的校验规则
+     * @return 通过校验的 BigDecimal 值；字段不在白名单返回 null（跳过）
+     */
+    private BigDecimal validateAttrValue(String field, Object value, Map<String, double[]> rules) {
+        double[] range = rules.get(field);
+        if (range == null) return null; // 字段不在白名单，跳过
+
+        if (value == null) {
+            throw new IllegalArgumentException("属性[" + field + "]不能为空");
+        }
+
+        BigDecimal bd;
+        try {
+            if (value instanceof BigDecimal) {
+                bd = (BigDecimal) value;
+            } else if (value instanceof Number) {
+                bd = new BigDecimal(value.toString());
+            } else {
+                bd = new BigDecimal(value.toString().trim());
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("属性[" + field + "]的值不是有效数字: " + value);
+        }
+
+        double v = bd.doubleValue();
+        if (v < range[0] || v > range[1]) {
+            throw new IllegalArgumentException(
+                    "属性[" + field + "]的值" + v + "超出有效范围[" + range[0] + ", " + range[1] + "]");
+        }
+        return bd;
+    }
 
     private void updateElectricMeter(Long attrId, Map<String, Object> attrs) {
         UpdateWrapper<DeviceAttrElectricMeter> wrapper = new UpdateWrapper<>();
         wrapper.eq("id", attrId);
         for (Map.Entry<String, Object> entry : attrs.entrySet()) {
-            wrapper.set(entry.getKey(), entry.getValue());
+            BigDecimal val = validateAttrValue(entry.getKey(), entry.getValue(), ELECTRIC_METER_RULES);
+            if (val != null) {
+                wrapper.set(entry.getKey(), val);
+            }
         }
         electricMeterMapper.update(null, wrapper);
     }
@@ -285,7 +384,10 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         UpdateWrapper<DeviceAttrAirStation> wrapper = new UpdateWrapper<>();
         wrapper.eq("id", attrId);
         for (Map.Entry<String, Object> entry : attrs.entrySet()) {
-            wrapper.set(entry.getKey(), entry.getValue());
+            BigDecimal val = validateAttrValue(entry.getKey(), entry.getValue(), AIR_STATION_RULES);
+            if (val != null) {
+                wrapper.set(entry.getKey(), val);
+            }
         }
         airStationMapper.update(null, wrapper);
     }
@@ -294,7 +396,10 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         UpdateWrapper<DeviceAttrSurfaceWater> wrapper = new UpdateWrapper<>();
         wrapper.eq("id", attrId);
         for (Map.Entry<String, Object> entry : attrs.entrySet()) {
-            wrapper.set(entry.getKey(), entry.getValue());
+            BigDecimal val = validateAttrValue(entry.getKey(), entry.getValue(), SURFACE_WATER_RULES);
+            if (val != null) {
+                wrapper.set(entry.getKey(), val);
+            }
         }
         surfaceWaterMapper.update(null, wrapper);
     }
@@ -303,7 +408,19 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         UpdateWrapper<DeviceAttrTvoc> wrapper = new UpdateWrapper<>();
         wrapper.eq("id", attrId);
         for (Map.Entry<String, Object> entry : attrs.entrySet()) {
-            wrapper.set(entry.getKey(), entry.getValue());
+            // wind_direction 是字符串字段，单独处理
+            if ("wind_direction".equals(entry.getKey())) {
+                String dir = entry.getValue() == null ? null : entry.getValue().toString().trim();
+                if (dir == null || dir.isEmpty()) {
+                    throw new IllegalArgumentException("属性[wind_direction]不能为空");
+                }
+                wrapper.set("wind_direction", dir);
+                continue;
+            }
+            BigDecimal val = validateAttrValue(entry.getKey(), entry.getValue(), TVOC_RULES);
+            if (val != null) {
+                wrapper.set(entry.getKey(), val);
+            }
         }
         tvocMapper.update(null, wrapper);
     }
