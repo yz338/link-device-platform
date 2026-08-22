@@ -163,16 +163,17 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         wo.setUpdateTime(new Date());
         workOrderMapper.updateById(wo);
 
-        // 场景2：工单开始处理，通知处理人
-        if (wo.getUserId() != null) {
+        // 场景2：工单开始处理，通知管理员
+        List<Long> adminIds = sysUserMapper.selectAdminUserIds();
+        for (Long adminId : adminIds) {
             try {
                 notificationService.createNotification(
-                        wo.getUserId(), null,
+                        adminId, null,
                         "工单开始处理",
-                        "工单「" + wo.getOrderTitle() + "」已开始处理"
+                        "工单「" + wo.getOrderTitle() + "」已由处理人开始处理"
                 );
             } catch (Exception e) {
-                log.warn("工单开始处理通知发送失败，orderId={}", orderId, e);
+                log.warn("工单开始处理通知发送失败，orderId={}, adminId={}", orderId, adminId, e);
             }
         }
     }
@@ -249,16 +250,17 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
             }
         }
 
-        // 场景3：提交处理结果，通知处理人工单待核验
-        if (wo.getUserId() != null) {
+        // 场景3：提交处理结果，通知管理员待核验
+        List<Long> adminIds2 = sysUserMapper.selectAdminUserIds();
+        for (Long adminId : adminIds2) {
             try {
                 notificationService.createNotification(
-                        wo.getUserId(), null,
-                        "工单处理完成",
+                        adminId, null,
+                        "新工单待核验",
                         "工单「" + wo.getOrderTitle() + "」处理完成，待核验"
                 );
             } catch (Exception e) {
-                log.warn("工单处理完成通知发送失败，orderId={}", orderId, e);
+                log.warn("工单待核验通知发送失败，orderId={}, adminId={}", orderId, adminId, e);
             }
         }
     }

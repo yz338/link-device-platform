@@ -86,7 +86,7 @@ public class AuthService {
                 .map(code -> code.substring("ROLE_".length())).toList();
         List<String> permissions = authorityCodes.stream()
                 .filter(code -> !code.startsWith("ROLE_")).toList();
-        return new UserProfileResponse(user.getUsername(), user.getNickname(), roles, permissions);
+        return new UserProfileResponse(user.getId(), user.getUsername(), user.getNickname(), roles, permissions);
     }
 
     /** 根据用户名统一创建 Access Token 和 Refresh Token。 */

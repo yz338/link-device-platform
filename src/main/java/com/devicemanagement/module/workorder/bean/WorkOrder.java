@@ -3,6 +3,7 @@ package com.devicemanagement.module.workorder.bean;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -27,9 +28,12 @@ public class WorkOrder {
     @Schema(description = "工单状态", example = "1")
     private Integer orderStatus;
     @Schema(description = "创建时间", example = "2026-08-20 10:53:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
     @Schema(description = "截止时间", example = "2026-08-20 10:53:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date deadline;
     @Schema(description = "更新时间", example = "2026-08-20 10:53:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date updateTime;
 }

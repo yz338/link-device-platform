@@ -3,6 +3,7 @@ package com.devicemanagement.module.workorder.bean;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -43,6 +44,7 @@ public class VerificationRecords{
      * 核验时间
      */
     @Schema(description = "核验时间", example = "2026-08-20 10:53:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date verificationTime;
 
 }

@@ -24,11 +24,11 @@ public interface WorkOrderService extends IService<WorkOrder> {
       WorkOrderVO getDetail(Long orderId);
       /** 开始处理：工单与告警进入处理中 */
       void startProcess(Long orderId);
-      /** 处理工单：处理人提交处理记录（最多上传 9 张图片） */
+      /** 处理工单：处理人提交处理记录） */
       void processWorkOrder(Long orderId, String method, String processDescription, MultipartFile[] images);
       /** 核验工单：管理员提交核验记录 */
       void verifyWorkOrder(VerifyWorkOrderRequest request);
-      /** 上传处理完成图片（兼容保留，按工单ID保存） */
+      /** 上传处理完成图片 */
       List<String> uploadImages(Long orderId, MultipartFile[] images);
       /** 工单统计 */
       WorkOrderStatsVO getStats();

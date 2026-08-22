@@ -13,6 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 @Schema(description = "当前登录用户信息")
 public class UserProfileResponse {
+    @Schema(description = "用户ID", example = "1")
+    private Long id;
     @Schema(description = "用户名", example = "admin")
     private String username;
     @Schema(description = "用户昵称", example = "管理员")

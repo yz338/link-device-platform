@@ -98,7 +98,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         // 先查通知，拿到 userId 用来更新缓存
         Notification notification = notificationMapper.selectById(id);
         if (notification == null) return;
-        notificationMapper.markAsRead(id);
+        notificationMapper.markAsRead(id, new Date());
         if (notification.getIsRead() != null && notification.getIsRead() == 0) {
             unreadCacheService.decrementAfterCommit(notification.getUserId());
         }
@@ -107,7 +107,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markAllAsRead(Long userId) {
-        notificationMapper.markAllAsRead(userId);
+        notificationMapper.markAllAsRead(userId, new Date());
         unreadCacheService.invalidateAfterCommit(userId);
     }
 

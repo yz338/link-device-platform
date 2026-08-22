@@ -1,5 +1,6 @@
 package com.devicemanagement.module.notification.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -31,8 +32,10 @@ public class NotificationVO {
     private Integer isRead;
 
     @Schema(description = "阅读时间", example = "2026-08-20 10:53:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date readTime;
 
     @Schema(description = "创建时间", example = "2026-08-20 10:53:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
 }

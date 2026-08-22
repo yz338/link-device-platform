@@ -31,4 +31,11 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
     /** 角色变更后，找出需要刷新权限缓存的用户。 */
     @Select("SELECT user_id FROM sys_user_role WHERE role_id = #{roleId}")
     List<Long> selectUserIdsByRoleId(Long roleId);
+
+    /** 查询所有管理员用户ID（角色编码为 ADMIN 的启用用户）。 */
+    @Select("SELECT u.id FROM sys_user u "
+            + "INNER JOIN sys_user_role ur ON u.id = ur.user_id "
+            + "INNER JOIN sys_role r ON ur.role_id = r.id "
+            + "WHERE r.role_code = 'ADMIN' AND u.enabled = 1")
+    List<Long> selectAdminUserIds();
 }
