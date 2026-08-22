@@ -29,7 +29,6 @@ import java.util.List;
 public class AlarmServiceImpl extends ServiceImpl<AlarmMapper, Alarm> implements AlarmService {
 
     private final AlarmIndicatorMapper alarmIndicatorMapper;
-
     // 设备相关 Mapper
     private final DeviceAttrMapper deviceAttrMapper;
     private final DeviceSubmissionElectricityMapper electricityMapper;
@@ -101,7 +100,7 @@ public class AlarmServiceImpl extends ServiceImpl<AlarmMapper, Alarm> implements
         wrapper.orderByDesc(Alarm::getAlarmTime);
         // 2. 分页查询告警
         Page<Alarm> page = this.page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
-        // 3. 转 VO，关联查设备信息
+        // 3. 转VO，关联查设备信息
         List<AlarmDetailVO> records = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         for (Alarm alarm : page.getRecords()) {
