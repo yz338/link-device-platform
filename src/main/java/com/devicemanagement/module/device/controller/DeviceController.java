@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -86,5 +88,15 @@ public class DeviceController {
     public Result<String> updateDeviceAttr(@RequestBody DeviceAttrUpdateDTO dto) {
         deviceService.updateDeviceAttr(dto);
         return Result.success("属性更新成功");
+    }
+    @PostMapping("/exportExcel")
+    @Operation(summary = "Excel导出设备", description = "导出设备信息")
+    public Result<String> exportExcel(List<Device> devices, HttpServletResponse response) throws IOException {
+        return Result.success(deviceService.exportExcel(devices, response));
+    }
+    @PostMapping("/exportTemplate")
+    @Operation(summary = "Excel导出模板", description = "导出设备信息模板")
+    public Result<String> exportTemplate(HttpServletResponse response) throws IOException {
+        return Result.success(deviceService.exportTemplate(response));
     }
 }

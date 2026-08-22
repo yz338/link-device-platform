@@ -1,7 +1,12 @@
 package com.devicemanagement.module.device.service.impl;
 
+import cn.afterturn.easypoi.excel.ExcelExportUtil;
 import cn.afterturn.easypoi.excel.ExcelImportUtil;
+import cn.afterturn.easypoi.excel.entity.ExportParams;
 import cn.afterturn.easypoi.excel.entity.ImportParams;
+import cn.afterturn.easypoi.excel.entity.TemplateExportParams;
+import cn.afterturn.easypoi.excel.entity.enmus.ExcelType;
+import cn.afterturn.easypoi.excel.export.template.ExcelExportOfTemplateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -19,12 +24,17 @@ import com.devicemanagement.module.device.service.DeviceCategoryService;
 import com.devicemanagement.module.device.service.DeviceService;
 import com.devicemanagement.module.device.vo.DeviceDetailVO;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.net.http.HttpHeaders;
 import java.util.*;
 
 @Service
@@ -180,6 +190,7 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
             return "文件为空,请选择文件";
         }
         ImportParams params=new ImportParams();
+        params.setTitleRows(1);
         params.setHeadRows(1);
         List<Device> devices = ExcelImportUtil.importExcel(file.getInputStream(), Device.class, params);
         if (devices == null || devices.isEmpty()) {
@@ -271,6 +282,46 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
                 break;
         }
     }
+
+    public String exportExcel(List<Device> devices, HttpServletResponse response) throws IOException {
+        Workbook workbook = ExcelExportUtil.exportExcel(new ExportParams("设备信息列表", "设备信息"), Device.class, devices);
+
+        // 设置响应头，触发浏览器下载
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("UTF-8");
+        String fileName = URLEncoder.encode("设备信息列表.xlsx", "UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+
+        // 写入响应输出流
+        workbook.write(response.getOutputStream());
+        workbook.close();
+        return "导出成功";
+    }
+
+    @Override
+    public String exportTemplate(HttpServletResponse response) throws IOException {
+        List<Device> devices = new ArrayList<>();
+        Device device = new Device();
+        device.setDeviceName("设备名称");
+        device.setLocation("设备位置");
+        device.setStatus(1L);
+        device.setDeviceCategoryId(1L);
+        devices.add(device);
+        ExportParams exportParams = new ExportParams("设备信息列表", "设备信息", ExcelType.XSSF);
+        Workbook workbook = ExcelExportUtil.exportExcel(exportParams, Device.class, devices);
+
+        // 设置响应头，触发浏览器下载
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("UTF-8");
+        String fileName = URLEncoder.encode("设备信息列表.xlsx", "UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+
+        // 写入响应输出流
+        workbook.write(response.getOutputStream());
+        workbook.close();
+        return "导出模板成功";
+    }
+
     /** 各属性表允许更新的字段白名单 + 范围 [min, max]，null 表示不限制 */
     private static final Map<String, double[]> ELECTRIC_METER_RULES = new HashMap<>();
     private static final Map<String, double[]> AIR_STATION_RULES = new HashMap<>();

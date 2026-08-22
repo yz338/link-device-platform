@@ -8,6 +8,7 @@ import com.devicemanagement.module.device.entity.Device;
 import com.devicemanagement.module.device.vo.DeviceDetailVO;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
@@ -21,4 +22,6 @@ public interface DeviceService extends IService<Device> {
     String importExcel(MultipartFile file) throws Exception;
     DeviceDetailVO getDeviceDetail(Long id);
     void updateDeviceAttr(DeviceAttrUpdateDTO dto);
+    String exportExcel(List<Device> devices, HttpServletResponse response) throws IOException;
+    String exportTemplate(HttpServletResponse response) throws IOException;
 }
