@@ -27,15 +27,16 @@ public class SystemUserController {
 
     private final SystemUserService systemUserService;
 
-    /** 按关键字分页查询系统用户。 */
+    /** 按关键字分页查询系统用户；可选按 roleCode 过滤（USER/ADMIN）。 */
     @GetMapping
     @Operation(summary = "分页查询用户")
     @PreAuthorize("hasAuthority('system:user:list')")
     public Result<Page<SysUser>> page(@RequestParam(defaultValue = "1") @Min(value = 1, message = "页码必须大于0") long pageNum,
                                       @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数必须大于0")
                                       @Max(value = 100, message = "每页条数不能超过100") long pageSize,
-                                      @RequestParam(required = false) String keyword) {
-        return Result.success(systemUserService.page(pageNum, pageSize, keyword));
+                                      @RequestParam(required = false) String keyword,
+                                      @RequestParam(required = false) String roleCode) {
+        return Result.success(systemUserService.page(pageNum, pageSize, keyword, roleCode));
     }
 
     /** 创建一个初始启用状态的系统用户。 */

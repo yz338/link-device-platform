@@ -23,4 +23,8 @@ public class UserCreateRequest {
     @Size(max = 50, message = "昵称长度不能超过50")
     @Schema(description = "用户昵称", example = "张三")
     private String nickname;
+
+    @Size(max = 100, message = "邮箱长度不能超过100")
+    @Schema(description = "接收通知的邮箱", example = "zhangsan@example.com")
+    private String email;
 }

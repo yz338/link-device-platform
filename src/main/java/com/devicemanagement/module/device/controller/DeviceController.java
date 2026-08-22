@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +32,7 @@ public class DeviceController {
     }
 
     @PostMapping("/addDevice")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "新增设备", description = "新增设备时会自动根据设备类别创建对应的属性记录")
     public Result<String> addDevice(@RequestBody DeviceDTO deviceDTO) {
         deviceService.save(deviceDTO);
@@ -38,6 +40,7 @@ public class DeviceController {
     }
 
     @PutMapping("/updateDevice")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "修改设备信息", description = "修改设备基本信息，不修改属性")
     public Result<Device> updateDevice(@RequestBody DeviceDTO deviceDTO) {
         Device device = deviceService.updateDevice(deviceDTO);
@@ -45,6 +48,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("/deleteDevice")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "删除设备", description = "根据设备ID删除设备及其关联的属性记录")
     public Result<String> deleteDevice(
             @Parameter(description = "设备ID", required = true) @RequestParam Long id) {
@@ -68,6 +72,7 @@ public class DeviceController {
     }
 
     @PostMapping("/importExcel")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Excel批量导入设备", description = "上传Excel文件批量导入设备，格式需与模板一致")
     public Result<String> importExcel(
             @Parameter(description = "Excel文件", required = true) @RequestParam("file") MultipartFile file) throws Exception {
@@ -84,6 +89,7 @@ public class DeviceController {
     }
 
     @PutMapping("/updateAttr")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "修改设备属性", description = "根据设备ID修改对应的设备属性值，未传的字段保持原值")
     public Result<String> updateDeviceAttr(@RequestBody DeviceAttrUpdateDTO dto) {
         deviceService.updateDeviceAttr(dto);

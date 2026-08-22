@@ -8,12 +8,14 @@ import com.devicemanagement.module.alarm.service.AlarmRuleService;
 import com.devicemanagement.module.alarm.vo.AlarmRuleVO;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 @RestController
 @RequestMapping("/alarmRule")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AlarmRuleController {
     private final AlarmRuleService alarmRuleService;
     @PostMapping("/rule/save")

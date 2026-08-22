@@ -169,10 +169,18 @@ public class AlarmIndicatoServiceImpl extends ServiceImpl<AlarmIndicatorMapper, 
 
     @Override
     public String updateAlarmIndicator(Long id, String name, String description) {
+        return updateAlarmIndicator(id, name, description, null);
+    }
+
+    @Override
+    public String updateAlarmIndicator(Long id, String name, String description, Byte status) {
         AlarmIndicator alarmIndicator = this.getById(id);
         if (alarmIndicator == null) return "指标不存在";
         alarmIndicator.setIndicatorName(name);
         alarmIndicator.setDescription(description);
+        if (status != null) {
+            alarmIndicator.setStatus(status);
+        }
         return this.updateById(alarmIndicator) ? "修改成功" : "修改失败";
     }
 }

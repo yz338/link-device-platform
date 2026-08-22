@@ -18,8 +18,8 @@ public interface WorkOrderService extends IService<WorkOrder> {
       void createWorkOrder(CreateWorkOrderRequest request);
       /** 更改处理人 */
       void updateHandlerUser(Long userId, Long orderId);
-      /** 分页查询工单 */
-      Page<WorkOrder> pageList(WorkOrderQueryDTO dto);
+      /** 分页查询工单（带设备名称等冗余字段） */
+      Page<WorkOrderVO> pageList(WorkOrderQueryDTO dto);
       /** 工单详情 */
       WorkOrderVO getDetail(Long orderId);
       /** 开始处理：工单与告警进入处理中 */

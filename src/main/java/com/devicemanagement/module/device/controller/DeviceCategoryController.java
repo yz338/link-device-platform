@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,18 +34,21 @@ public class DeviceCategoryController {
     }
 
     @PostMapping("/addDeviceCategory")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "新增设备类别", description = "新增设备类别，category_name和description必填")
     public Result<DeviceCategory> addDeviceCategory(@RequestBody DeviceCategoryDTO deviceCategoryDTO) {
         return Result.success(deviceCategoryService.addDeviceCategory(deviceCategoryDTO));
     }
 
     @PutMapping("/updateDeviceCategory")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "修改设备类别", description = "根据ID修改设备类别信息")
     public Result<DeviceCategory> updateDeviceCategory(@RequestBody DeviceCategoryDTO deviceCategoryDTO) {
         return Result.success(deviceCategoryService.updateDeviceCategory(deviceCategoryDTO));
     }
 
     @DeleteMapping("/deleteDeviceCategory")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "删除设备类别", description = "根据ID删除设备类别")
     public Result<String> deleteDeviceCategory(
             @Parameter(description = "设备类别ID", required = true) @RequestParam Integer id) {

@@ -3,7 +3,7 @@ spring:
     name: device-management
   datasource:
     # 使用环境变量便于学生按自己的 MySQL 账号调整，不在代码中写死真实密码。
-    url: ${DEVICE_DB_URL:jdbc:mysql://121.40.224.123:3306/device_management_hy?serverTimezone=UTC&useSSL=false&characterEncoding=utf8}
+    url: ${DEVICE_DB_URL:jdbc:mysql://121.40.224.123:3306/device_management_hy?serverTimezone=Asia/Shanghai&useSSL=false&characterEncoding=utf8}
     username: ${DEVICE_DB_USERNAME:team_user}
     password: ${DEVICE_DB_PASSWORD:Team123!@#}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -23,8 +23,27 @@ spring:
       # 上传图片的大小限制：单张 5MB，一次请求合计 20MB
       max-file-size: 5MB
       max-request-size: 20MB
-  profiles:
-    active: prod
+  mail:
+    # 站内通知同步发邮件的 SMTP 配置；未填写时 JavaMailSender 不会被装配，邮件同步自动跳过。
+    # 示例（QQ 邮箱）：host=smtp.qq.com port=465 username=xxx@qq.com password=邮箱授权码（非登录密码）
+    host: ${DEVICE_MAIL_HOST:smtp.qq.com}
+    port: ${DEVICE_MAIL_PORT:465}
+    username: ${DEVICE_MAIL_USERNAME:3363214958@qq.com}
+    password: ${DEVICE_MAIL_PASSWORD:opzgskgipxrydcag}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            required: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 30000
+          timeout: 30000
+          writetimeout: 30000
 
 server:
   port: 8080
@@ -40,7 +59,3 @@ security:
     secret: ${DEVICE_JWT_SECRET:device-management-course-jwt-secret-change-in-production-2026}
     expire-seconds: 7200
     refresh-expire-seconds: 604800
-
-app:
-  # 工单处理图片的本地保存目录（相对运行目录），可用环境变量覆盖
-  upload-dir: ${DEVICE_UPLOAD_DIR:./upload}

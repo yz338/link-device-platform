@@ -29,6 +29,8 @@ public class SysUser {
     private String nickname;
     @Schema(description = "是否启用", example = "true")
     private Boolean enabled;
+    @Schema(description = "接收同步邮件的真实邮箱，空值则不发送邮件", example = "admin@example.com")
+    private String email;
     @Schema(description = "创建时间", example = "2026-08-16T10:00:00")
     private LocalDateTime createTime;
 }

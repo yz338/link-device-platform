@@ -1,5 +1,6 @@
 package com.devicemanagement.module.system.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.devicemanagement.framework.redis.UserAuthorityCacheService;
 import com.devicemanagement.common.exception.BusinessException;
 import com.devicemanagement.module.system.dto.RoleIdsRequest;
@@ -25,13 +26,37 @@ public class SystemUserService {
     private final UserAuthorityCacheService userAuthorityCacheService;
     private final PasswordEncoder passwordEncoder;
 
-    /** 按用户名或昵称分页查询系统用户。 */
-    public Page<SysUser> page(long pageNum, long pageSize, String keyword) {
-        return sysUserMapper.selectPage(Page.of(pageNum, pageSize), Wrappers.<SysUser>lambdaQuery()
-                .like(keyword != null && !keyword.isBlank(), SysUser::getUsername, keyword)
-                .or(keyword != null && !keyword.isBlank())
-                .like(keyword != null && !keyword.isBlank(), SysUser::getNickname, keyword)
-                .orderByDesc(SysUser::getId));
+    /** 按用户名或昵称分页查询系统用户；可选按 roleCode 过滤（例如下发工单只需要运维人员 USER）。 */
+    public Page<SysUser> page(long pageNum, long pageSize, String keyword, String roleCode) {
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        if (roleCode == null || roleCode.isBlank()) {
+            return sysUserMapper.selectPage(Page.of(pageNum, pageSize), Wrappers.<SysUser>lambdaQuery()
+                    .like(hasKeyword, SysUser::getUsername, keyword)
+                    .or(hasKeyword)
+                    .like(hasKeyword, SysUser::getNickname, keyword)
+                    .orderByDesc(SysUser::getId));
+        }
+        // 按角色过滤：通过 user_role + role 关联拿到用户 ID，再查用户
+        String safeRoleCode = roleCode.replace("'", "");
+        LambdaQueryWrapper<SysUser> qw = Wrappers.<SysUser>lambdaQuery()
+                .inSql(SysUser::getId,
+                        "SELECT ur.user_id FROM sys_user_role ur "
+                                + "INNER JOIN sys_role r ON ur.role_id = r.id WHERE r.role_code = '"
+                                + safeRoleCode + "'");
+        if (hasKeyword) {
+            qw.and(w -> w
+                    .like(SysUser::getUsername, keyword)
+                    .or()
+                    .like(SysUser::getNickname, keyword));
+        }
+        qw.orderByDesc(SysUser::getId);
+        return sysUserMapper.selectPage(Page.of(pageNum, pageSize), qw);
+    }
+
+    /** 检查用户是否持有指定角色（例如下发工单前校验处理人角色）。 */
+    public boolean hasRole(Long userId, String roleCode) {
+        if (userId == null || roleCode == null || roleCode.isBlank()) return false;
+        return sysUserMapper.countUserWithRole(userId, roleCode) > 0;
     }
 
     /** 创建初始启用状态的账号，并将明文密码转换为 BCrypt 密文。 */
@@ -45,6 +70,7 @@ public class SystemUserService {
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setNickname(request.getNickname());
+        user.setEmail(request.getEmail());
         user.setEnabled(true);
         sysUserMapper.insert(user);
         return user;

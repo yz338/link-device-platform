@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/alarmIndicator")
 @RequiredArgsConstructor
 @Tag(name = "告警指标管理", description = "告警指标的增删改查")
+@PreAuthorize("hasRole('ADMIN')")
 public class AlarmIndicatorController {
 
     private final AlarmIndicatoService alarmIndicatoService;
@@ -41,11 +43,12 @@ public class AlarmIndicatorController {
     }
 
     @PutMapping("/updateAlarmIndicator")
-    @Operation(summary = "编辑告警指标（修改名称+描述）")
+    @Operation(summary = "编辑告警指标（修改名称+描述+状态）")
     public Result<String> updateAlarmIndicator(
             @Parameter(description = "指标ID", required = true) @RequestParam Long id,
             @Parameter(description = "指标名称", required = true) @RequestParam String name,
-            @Parameter(description = "指标描述") @RequestParam(required = false) String description) {
-        return Result.success(alarmIndicatoService.updateAlarmIndicator(id, name, description));
+            @Parameter(description = "指标描述") @RequestParam(required = false) String description,
+            @Parameter(description = "状态：1=启用 2=停用") @RequestParam(required = false) Byte status) {
+        return Result.success(alarmIndicatoService.updateAlarmIndicator(id, name, description, status));
     }
 }

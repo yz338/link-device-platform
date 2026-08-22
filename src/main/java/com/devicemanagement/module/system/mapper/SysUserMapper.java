@@ -38,4 +38,10 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             + "INNER JOIN sys_role r ON ur.role_id = r.id "
             + "WHERE r.role_code = 'ADMIN' AND u.enabled = 1")
     List<Long> selectAdminUserIds();
+
+    /** 判断用户是否持有指定角色（用于创建工单时校验处理人必须是运维）。 */
+    @Select("SELECT COUNT(1) FROM sys_user_role ur "
+            + "INNER JOIN sys_role r ON ur.role_id = r.id "
+            + "WHERE ur.user_id = #{userId} AND r.role_code = #{roleCode}")
+    int countUserWithRole(Long userId, String roleCode);
 }
