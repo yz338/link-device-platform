@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -20,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/alarm")
 @Tag(name = "告警管理", description = "告警列表、详情等接口")
+@PreAuthorize("hasRole('ADMIN')")
 public class AlarmController {
     @Autowired
     private AlarmService alarmService;

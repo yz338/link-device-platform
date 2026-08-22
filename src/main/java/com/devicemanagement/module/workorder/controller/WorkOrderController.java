@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +29,7 @@ public class WorkOrderController {
     /** 下发工单 */
     @PostMapping("/create")
     @Operation(summary = "下发工单")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<String> create(@Valid @RequestBody CreateWorkOrderRequest request) {
         workOrderService.createWorkOrder(request);
         return Result.success("下发工单成功");
@@ -36,6 +38,7 @@ public class WorkOrderController {
     /** 变更工单处理人 */
     @PostMapping("/changeHandler")
     @Operation(summary = "变更工单处理人")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<String> changeHandler(@RequestParam Long orderId, @RequestParam Long userId) {
         workOrderService.updateHandlerUser(userId, orderId);
         return Result.success("变更处理人成功");
@@ -63,6 +66,7 @@ public class WorkOrderController {
     /** 核验工单：管理员提交核验记录 */
     @PostMapping("/verify")
     @Operation(summary = "核验工单")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> verify(@Valid @RequestBody VerifyWorkOrderRequest request) {
         workOrderService.verifyWorkOrder(request);
         return Result.success(null);
@@ -76,10 +80,10 @@ public class WorkOrderController {
         return Result.success(workOrderService.uploadImages(orderId, images));
     }
 
-    /** 分页查询工单 */
+    /** 分页查询工单（返回带设备名称等冗余字段的VO） */
     @GetMapping("/list")
     @Operation(summary = "分页查询工单")
-    public Result<Page<WorkOrder>> list(WorkOrderQueryDTO dto) {
+    public Result<Page<WorkOrderVO>> list(WorkOrderQueryDTO dto) {
         return Result.success(workOrderService.pageList(dto));
     }
 
@@ -93,6 +97,7 @@ public class WorkOrderController {
     /** 工单统计：总数 + 核验未通过次数 */
     @GetMapping("/stats")
     @Operation(summary = "工单统计")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<com.devicemanagement.module.workorder.vo.WorkOrderStatsVO> stats() {
         return Result.success(workOrderService.getStats());
     }

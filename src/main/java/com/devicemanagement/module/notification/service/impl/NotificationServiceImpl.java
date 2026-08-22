@@ -9,6 +9,7 @@ import com.devicemanagement.framework.redis.NotificationUnreadCacheService;
 import com.devicemanagement.module.notification.dto.NotificationCreateRequest;
 import com.devicemanagement.module.notification.entity.Notification;
 import com.devicemanagement.module.notification.mapper.NotificationMapper;
+import com.devicemanagement.module.notification.service.EmailNotificationService;
 import com.devicemanagement.module.notification.service.NotificationService;
 import com.devicemanagement.module.notification.vo.NotificationVO;
 import com.devicemanagement.module.notification.vo.UnreadCountVO;
@@ -34,6 +35,9 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
     @Autowired
     private NotificationUnreadCacheService unreadCacheService;
 
+    @Autowired(required = false)
+    private EmailNotificationService emailNotificationService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void createNotification(NotificationCreateRequest request) {
@@ -49,6 +53,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         notification.setCreateTime(new Date());
         notificationMapper.insert(notification);
         unreadCacheService.incrementAfterCommit(request.getUserId());
+        syncSendEmail(request.getUserId(), request.getTitle(), request.getContent());
     }
 
     @Override
@@ -66,6 +71,17 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         notification.setCreateTime(new Date());
         notificationMapper.insert(notification);
         unreadCacheService.incrementAfterCommit(userId);
+        syncSendEmail(userId, title, content);
+    }
+
+    /** 站内通知写入后，同步发真实邮箱；任何异常内部吞掉，绝不回滚站内信。 */
+    private void syncSendEmail(Long userId, String title, String content) {
+        if (emailNotificationService == null || userId == null) return;
+        try {
+            emailNotificationService.trySendToUser(userId, title, content);
+        } catch (Exception e) {
+            // 双保险：上层已经 catch 过一次，这里防止未来加逻辑时的遗漏
+        }
     }
 
     @Override

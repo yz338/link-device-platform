@@ -14,4 +14,6 @@ public interface AlarmIndicatoService extends IService<AlarmIndicator> {
     String deleteAlarmIndicator(Long id);
     String addAlarmIndicator(AlarmIndicatorDTO alarmIndicatorDTO);
     String updateAlarmIndicator(Long id,String name,String description);
+    /** 编辑告警指标（支持修改状态）：status 传 null 则不修改状态 */
+    String updateAlarmIndicator(Long id,String name,String description,Byte status);
 }

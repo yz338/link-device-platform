@@ -79,6 +79,10 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         if (alarm.getStatus() != null && alarm.getStatus() != 0) {
             throw new BusinessException("该告警已有工单处理中或已处理，不能下发工单");
         }
+        // 处理人必须是运维人员（USER 角色），防止前端绕过把工单发给管理员
+        if (request.getUserId() != null && sysUserMapper.countUserWithRole(request.getUserId(), "USER") <= 0) {
+            throw new BusinessException("工单只能下发给运维人员（USER 角色）");
+        }
         WorkOrder workOrder = new WorkOrder();
         workOrder.setAlarmId(request.getAlarmId());
         workOrder.setOrderTitle(request.getOrderTitle());
@@ -125,6 +129,10 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         if (status == null || (status != WorkOrderStatus.UNPROCESSED.getCode()
                 && status != WorkOrderStatus.VERIFY_REJECTED.getCode())) {
             throw new BusinessException("未处理或核验未通过的工单才能修改处理人");
+        }
+        // 新处理人必须是运维人员（USER 角色）
+        if (userId != null && sysUserMapper.countUserWithRole(userId, "USER") <= 0) {
+            throw new BusinessException("处理人必须是运维人员（USER 角色）");
         }
         if (userId != null && userId.equals(workOrder.getUserId())) {
             throw new BusinessException("处理人不能与原处理人相同");
@@ -380,7 +388,7 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
     }
 
     @Override
-    public Page<WorkOrder> pageList(WorkOrderQueryDTO dto) {
+    public Page<WorkOrderVO> pageList(WorkOrderQueryDTO dto) {
         Page<WorkOrder> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         LambdaQueryWrapper<WorkOrder> wrapper = Wrappers.<WorkOrder>lambdaQuery()
                 .eq(dto.getOrderId() != null, WorkOrder::getOrderId, dto.getOrderId())
@@ -389,7 +397,54 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
                 .eq(dto.getOrderStatus() != null, WorkOrder::getOrderStatus, dto.getOrderStatus())
                 .eq(dto.getUserId() != null, WorkOrder::getUserId, dto.getUserId())
                 .orderByDesc(WorkOrder::getCreateTime);
-        return baseMapper.selectPage(page, wrapper);
+        Page<WorkOrder> rawPage = baseMapper.selectPage(page, wrapper);
+
+        // 批量关联设备名称，避免详情走 N+1
+        List<Long> alarmIds = new ArrayList<>();
+        for (WorkOrder wo : rawPage.getRecords()) {
+            if (wo.getAlarmId() != null) alarmIds.add(wo.getAlarmId());
+        }
+        Map<Long, String> deviceNameByAlarmId = new HashMap<>();
+        if (!alarmIds.isEmpty()) {
+            List<Alarm> alarms = alarmMapper.selectBatchIds(alarmIds);
+            List<Long> deviceIds = new ArrayList<>();
+            Map<Long, Long> alarmToDevice = new HashMap<>();
+            for (Alarm a : alarms) {
+                if (a.getDeviceId() != null) {
+                    alarmToDevice.put(a.getId(), a.getDeviceId());
+                    deviceIds.add(a.getDeviceId());
+                }
+            }
+            if (!deviceIds.isEmpty()) {
+                List<Device> devices = deviceMapper.selectBatchIds(deviceIds);
+                Map<Long, String> deviceNames = new HashMap<>();
+                for (Device d : devices) deviceNames.put(d.getId(), d.getDeviceName());
+                for (Map.Entry<Long, Long> e : alarmToDevice.entrySet()) {
+                    String name = deviceNames.get(e.getValue());
+                    if (name != null) deviceNameByAlarmId.put(e.getKey(), name);
+                }
+            }
+        }
+
+        // 转换为 VO
+        Page<WorkOrderVO> voPage = new Page<>(rawPage.getCurrent(), rawPage.getSize(), rawPage.getTotal());
+        List<WorkOrderVO> voList = new ArrayList<>(rawPage.getRecords().size());
+        for (WorkOrder wo : rawPage.getRecords()) {
+            WorkOrderVO vo = new WorkOrderVO();
+            vo.setOrderId(String.valueOf(wo.getOrderId()));
+            vo.setOrderTitle(wo.getOrderTitle());
+            vo.setOrderDescription(wo.getOrderDescription());
+            vo.setOrderStatus(wo.getOrderStatus());
+            vo.setDeadline(wo.getDeadline());
+            vo.setUserId(wo.getUserId());
+            vo.setAlarmId(wo.getAlarmId());
+            vo.setCreateTime(wo.getCreateTime());
+            vo.setUpdateTime(wo.getUpdateTime());
+            vo.setDeviceName(deviceNameByAlarmId.get(wo.getAlarmId()));
+            voList.add(vo);
+        }
+        voPage.setRecords(voList);
+        return voPage;
     }
 
     @Override
@@ -405,6 +460,10 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         vo.setOrderDescription(wo.getOrderDescription());
         vo.setOrderStatus(wo.getOrderStatus());
         vo.setDeadline(wo.getDeadline());
+        vo.setUserId(wo.getUserId());
+        vo.setAlarmId(wo.getAlarmId());
+        vo.setCreateTime(wo.getCreateTime());
+        vo.setUpdateTime(wo.getUpdateTime());
 
         // 告警 + 设备信息
         if (wo.getAlarmId() != null) {
