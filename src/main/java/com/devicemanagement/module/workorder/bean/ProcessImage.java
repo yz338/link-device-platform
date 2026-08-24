@@ -19,11 +19,11 @@ public class ProcessImage {
     @Schema(description = "图片ID", example = "1")
     private Integer imageId;
 
-    /** 处理记录ID，对应 process_record.process_id */
+    /** 处理记录ID */
     @Schema(description = "处理记录ID", example = "1")
     private Integer processId;
 
-    /** 访问路径，如 /upload/workorder/xxx.jpg，前端拼 host 使用 */
+    /** 访问路径 */
     @Schema(description = "图片访问路径", example = "/upload/workorder/abc.jpg")
     private String imageUrl;
 
