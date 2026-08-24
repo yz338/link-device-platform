@@ -278,27 +278,70 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         if (devices == null || devices.isEmpty()) {
             return "文件内容为空";
         }
+
+        int totalCount = devices.size();
+        int skipEmpty = 0;      // 设备名为空跳过
+        int skipCategory = 0;   // 类别不存在跳过
+        int skipDuplicate = 0;  // 重复跳过（文件内+数据库）
+        int imported = 0;       // 成功导入
+
+        // 1. 文件内去重：按设备名只保留第一条
+        Set<String> seenInFile = new HashSet<>();
+
+        // 2. 数据库去重：一次性查出所有已存在的设备名
+        List<Device> existingDevices = this.list(new LambdaQueryWrapper<Device>()
+                .select(Device::getDeviceName));
+        Set<String> existingNames = new HashSet<>();
+        for (Device d : existingDevices) {
+            if (d.getDeviceName() != null) {
+                existingNames.add(d.getDeviceName());
+            }
+        }
+
         for (DeviceTemplateVO vo : devices) {
             if (vo.getDeviceName() == null || vo.getDeviceName().isEmpty()) {
+                skipEmpty++;
                 continue;
             }
+            String deviceName = vo.getDeviceName().trim();
+
+            // 文件内去重
+            if (seenInFile.contains(deviceName)) {
+                skipDuplicate++;
+                continue;
+            }
+            // 数据库去重
+            if (existingNames.contains(deviceName)) {
+                skipDuplicate++;
+                continue;
+            }
+
             // 按模板「设备类别」名称反查分类ID
             DeviceCategory category = deviceCategoryService.getOne(
                     new LambdaQueryWrapper<DeviceCategory>()
                             .eq(DeviceCategory::getCategoryName, vo.getDeviceCategoryId()));
             if (category == null) {
+                skipCategory++;
                 continue;
             }
+
             Device device = new Device();
-            device.setDeviceName(vo.getDeviceName());
+            device.setDeviceName(deviceName);
             device.setDeviceCategoryId(category.getId());
             device.setLocation(vo.getLocation());
             device.setStatus(Long.valueOf(vo.getStatus() == null ? 1 : vo.getStatus().intValue()));
             this.save(device);
-            // 创建 device_attr 关联记录
             createDeviceAttrForDevice(device);
+
+            // 标记已处理
+            seenInFile.add(deviceName);
+            existingNames.add(deviceName);
+            imported++;
         }
-        return "导入成功";
+
+        return String.format("导入完成：共%d条，成功%d条，跳过%d条（重名%d/类别不存在%d/名称为空%d）",
+                totalCount, imported, skipDuplicate + skipCategory + skipEmpty,
+                skipDuplicate, skipCategory, skipEmpty);
     }
 
     @Override
