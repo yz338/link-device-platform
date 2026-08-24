@@ -19,7 +19,6 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     private final ObjectMapper objectMapper;
 
-    /** 在匿名访问受保护资源时输出统一的 401 JSON 响应。 */
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {

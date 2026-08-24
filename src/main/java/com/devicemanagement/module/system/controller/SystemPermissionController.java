@@ -25,7 +25,7 @@ public class SystemPermissionController {
     /** 返回权限字典；角色授权页面与权限管理页面均可调用。 */
     @GetMapping
     @Operation(summary = "查询权限列表")
-    @PreAuthorize("hasAnyAuthority('system:role:list', 'system:permission:list')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<List<SysPermission>> listPermissions() {
         return Result.success(systemPermissionService.list());
     }
@@ -33,7 +33,7 @@ public class SystemPermissionController {
     /** 新增一项可分配权限。 */
     @PostMapping
     @Operation(summary = "新增权限")
-    @PreAuthorize("hasAuthority('system:permission:add')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<SysPermission> createPermission(@Valid @RequestBody PermissionSaveRequest request) {
         return Result.success(systemPermissionService.create(request));
     }
@@ -41,7 +41,7 @@ public class SystemPermissionController {
     /** 修改一项可分配权限。 */
     @PutMapping("/{permissionId}")
     @Operation(summary = "修改权限")
-    @PreAuthorize("hasAuthority('system:permission:update')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<SysPermission> updatePermission(@PathVariable Long permissionId,
                                                    @Valid @RequestBody PermissionSaveRequest request) {
         return Result.success(systemPermissionService.update(permissionId, request));
@@ -50,7 +50,7 @@ public class SystemPermissionController {
     /** 删除一项可分配权限及其角色关联。 */
     @DeleteMapping("/{permissionId}")
     @Operation(summary = "删除权限")
-    @PreAuthorize("hasAuthority('system:permission:delete')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> deletePermission(@PathVariable Long permissionId) {
         systemPermissionService.delete(permissionId);
         return Result.success(null);

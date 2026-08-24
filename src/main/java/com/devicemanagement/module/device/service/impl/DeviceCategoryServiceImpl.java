@@ -3,6 +3,7 @@ package com.devicemanagement.module.device.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.devicemanagement.common.exception.BusinessException;
 import com.devicemanagement.module.device.dto.DeviceCategoryDTO;
 import com.devicemanagement.module.device.entity.Device;
 import com.devicemanagement.module.device.entity.DeviceCategory;
@@ -73,10 +74,10 @@ public class DeviceCategoryServiceImpl extends ServiceImpl<DeviceCategoryMapper,
 
     @Override
     public String deleteDeviceCategory(Integer id) {
-        LambdaQueryWrapper<Device> wrapper=new LambdaQueryWrapper<>();
-        List<Device> list=deviceMapper.selectList(wrapper.eq(Device::getDeviceCategoryId,id));
-        if(!list.isEmpty()){
-            return "该类别下有设备，不能删除";
+        Long count = deviceMapper.selectCount(new LambdaQueryWrapper<Device>()
+                .eq(Device::getDeviceCategoryId, id));
+        if (count != null && count > 0) {
+            throw new BusinessException("该类别下还有设备，不允许删除");
         }
         deviceCategoryMapper.deleteById(id);
         return "删除成功";

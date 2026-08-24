@@ -26,7 +26,7 @@ public class SystemRoleController {
     /** 返回所有可分配角色。 */
     @GetMapping("/roles")
     @Operation(summary = "查询角色列表")
-    @PreAuthorize("hasAuthority('system:role:list')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<List<SysRole>> listRoles() {
         return Result.success(systemRoleService.listRoles());
     }
@@ -34,7 +34,7 @@ public class SystemRoleController {
     /** 创建新的业务角色。 */
     @PostMapping("/roles")
     @Operation(summary = "新增角色")
-    @PreAuthorize("hasAuthority('system:role:add')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<SysRole> createRole(@Valid @RequestBody RoleCreateRequest request) {
         return Result.success(systemRoleService.create(request));
     }
@@ -42,7 +42,7 @@ public class SystemRoleController {
     /** 返回角色当前已拥有的权限 ID，用于前端复选框回显。 */
     @GetMapping("/roles/{roleId}/permission-ids")
     @Operation(summary = "查询角色已分配权限")
-    @PreAuthorize("hasAuthority('system:role:assign-permission')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<List<Long>> listRolePermissionIds(@PathVariable Long roleId) {
         return Result.success(systemRoleService.listPermissionIds(roleId));
     }
@@ -50,7 +50,7 @@ public class SystemRoleController {
     /** 以覆盖方式为角色分配权限码。 */
     @PutMapping("/roles/{roleId}/permissions")
     @Operation(summary = "分配角色权限")
-    @PreAuthorize("hasAuthority('system:role:assign-permission')")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> assignPermissions(@PathVariable Long roleId,
                                           @Valid @RequestBody PermissionIdsRequest request) {
         systemRoleService.assignPermissions(roleId, request);

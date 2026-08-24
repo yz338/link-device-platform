@@ -25,43 +25,43 @@ public class Device implements Serializable {
     /**
      * 设备名称
      */
-    @Excel(name = "设备名称")
+    @Excel(name = "设备名称", width = 25)
     @Schema(description = "设备名称", example = "温湿度传感器A")
     private String deviceName;
 
     /**
      * 设备类别ID
      */
-    @Excel(name = "设备类别ID")
+    @Excel(name = "设备类别", width = 15,replace = {"用电设备_1","空气微站_2","TVOC_3","地表水_5"})
     @Schema(description = "设备类别ID", example = "1")
     private Long deviceCategoryId;
 
     /**
     * 设备位置
     */
-    @Excel(name = "设备位置")
+    @Excel(name = "设备位置", width = 25)
     @Schema(description = "设备位置", example = "一号车间")
     private String location;
 
     /**
-    * 设备属性
-    * 0离线 1在线
+     * 设备属性
+     * 0离线 1在线
     */
-    @Excel(name = "设备状态",replace = {"在线_1","离线_0"})
+    @Excel(name = "设备状态", replace = {"在线_1","离线_0"}, width = 12)
     @Schema(description = "设备状态：0=离线，1=在线", example = "1")
     private Long status;
     /**
     * 创建时间
     */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
-    @Excel(name = "创建时间", format = "yyyy-MM-dd HH:mm:ss")
+    @Excel(name = "创建时间", format = "yyyy-MM-dd HH:mm:ss", width = 22)
     @Schema(description = "创建时间")
     private Date createTime;
     /**
     * 更新时间
     */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    @Excel(name = "更新时间", format = "yyyy-MM-dd HH:mm:ss")
+    @Excel(name = "更新时间", format = "yyyy-MM-dd HH:mm:ss", width = 22)
     @Schema(description = "更新时间")
     private Date updateTime;
 

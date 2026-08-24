@@ -61,8 +61,8 @@ public class SecurityConfig {
                 .and()
                 .authorizeRequests()
                 .antMatchers("/api/auth/captcha", "/api/auth/login", "/api/auth/refresh",
-                        "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/doc.html").permitAll()
-                // TODO 临时调试：全站放行，测完工单接口后改回 .authenticated()
+                        "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/doc.html",
+                        "/upload/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

@@ -1,8 +1,10 @@
 package com.devicemanagement.module.system.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -31,6 +33,12 @@ public class SysUser {
     private Boolean enabled;
     @Schema(description = "接收同步邮件的真实邮箱，空值则不发送邮件", example = "admin@example.com")
     private String email;
-    @Schema(description = "创建时间", example = "2026-08-16T10:00:00")
+    @Schema(description = "创建时间", example = "2026-08-16 10:00:00")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime createTime;
+
+    /** 用户所属角色名称，非数据库字段，分页查询时手动填充。 */
+    @TableField(exist = false)
+    @Schema(description = "角色名称，多角色以顿号分隔", example = "管理员、运维人员")
+    private String roleName;
 }

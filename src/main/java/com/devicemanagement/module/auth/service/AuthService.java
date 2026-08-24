@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
     private final UserAuthorityCacheService userAuthorityCacheService;
     private final SysUserMapper sysUserMapper;
+    private final PasswordEncoder passwordEncoder;
 
     /** 创建用于登录的验证码。 */
     public CaptchaResponse createCaptcha() {
@@ -86,7 +88,37 @@ public class AuthService {
                 .map(code -> code.substring("ROLE_".length())).toList();
         List<String> permissions = authorityCodes.stream()
                 .filter(code -> !code.startsWith("ROLE_")).toList();
-        return new UserProfileResponse(user.getId(), user.getUsername(), user.getNickname(), roles, permissions);
+        return new UserProfileResponse(user.getId(), user.getUsername(), user.getNickname(), roles, permissions,
+                user.getEmail());
+    }
+
+    /** 修改当前登录用户本人的昵称和邮箱。 */
+    public void updateProfile(String username, ProfileUpdateRequest request) {
+        SysUser user = findUser(username);
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new BusinessException("用户已被禁用");
+        }
+        if (request.getNickname() != null) {
+            user.setNickname(request.getNickname());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        sysUserMapper.updateById(user);
+    }
+
+    /** 修改当前登录用户本人的密码：先校验原密码，正确再更新为新密码（加密）。 */
+    public void updatePassword(String username, PasswordUpdateRequest request) {
+        SysUser user = findUser(username);
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new BusinessException("用户已被禁用");
+        }
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("原密码不正确");
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        sysUserMapper.updateById(user);
+        userAuthorityCacheService.invalidateAfterCommit(user.getId());
     }
 
     /** 根据用户名统一创建 Access Token 和 Refresh Token。 */

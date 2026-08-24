@@ -23,6 +23,19 @@ import com.devicemanagement.module.device.mapper.*;
 import com.devicemanagement.module.device.service.DeviceCategoryService;
 import com.devicemanagement.module.device.service.DeviceService;
 import com.devicemanagement.module.device.vo.DeviceDetailVO;
+import com.devicemanagement.module.device.vo.DeviceTemplateVO;
+import com.devicemanagement.module.alarm.bean.Alarm;
+import com.devicemanagement.module.alarm.bean.IndicatorDevice;
+import com.devicemanagement.module.alarm.mapper.AlarmMapper;
+import com.devicemanagement.module.alarm.mapper.IndicatorDeviceMapper;
+import com.devicemanagement.module.workorder.bean.ProcessImage;
+import com.devicemanagement.module.workorder.bean.ProcessRecord;
+import com.devicemanagement.module.workorder.bean.VerificationRecords;
+import com.devicemanagement.module.workorder.bean.WorkOrder;
+import com.devicemanagement.module.workorder.mapper.ProcessImageMapper;
+import com.devicemanagement.module.workorder.mapper.ProcessRecordMapper;
+import com.devicemanagement.module.workorder.mapper.VerificationRecordsMapper;
+import com.devicemanagement.module.workorder.mapper.WorkOrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.beans.BeanUtils;
@@ -61,6 +74,13 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
     private final DeviceSubmissionTvocMapper tvocSubmissionMapper;
 
     private final DeviceAttrMapper deviceAttrMapper;
+    // —— 删除设备时的外键关联表 Mapper，需按「子→父」顺序删除 ——
+    private final AlarmMapper alarmMapper;
+    private final IndicatorDeviceMapper indicatorDeviceMapper;
+    private final WorkOrderMapper workOrderMapper;
+    private final VerificationRecordsMapper verificationRecordsMapper;
+    private final ProcessRecordMapper processRecordMapper;
+    private final ProcessImageMapper processImageMapper;   // process_images 表（process_images 是图片真实存的表）
     @Override
     public List<Device> deviceList(DeviceDTO deviceDTO) {
         LambdaQueryWrapper<Device> queryWrapper = new LambdaQueryWrapper<>();
@@ -129,35 +149,97 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         if (device == null) {
             return "设备不存在";
         }
+
+        // ───────────────────────────────────────────────────────
+        // 1. 先清理业务层关联：告警 → 工单 → 核验/处理记录 → 处理记录图片
+        //    逐条循环删除，避免 Long vs Integer 类型不匹配导致 in 查询失效
+        // ───────────────────────────────────────────────────────
+        List<Alarm> alarms = alarmMapper.selectList(
+                new LambdaQueryWrapper<Alarm>().eq(Alarm::getDeviceId, id));
+
+        if (!alarms.isEmpty()) {
+            for (Alarm alarm : alarms) {
+                Long alarmId = alarm.getId();
+                if (alarmId == null) continue;
+
+                // 1a) 查询该告警下的所有工单（WorkOrder.orderId 是 Long）
+                List<WorkOrder> orders = workOrderMapper.selectList(
+                        new LambdaQueryWrapper<WorkOrder>().eq(WorkOrder::getAlarmId, alarmId));
+
+                for (WorkOrder order : orders) {
+                    Long orderId = order.getOrderId();
+                    if (orderId == null) continue;
+                    int orderIdInt = orderId.intValue();
+
+                    // 1b) 先删处理记录关联的 process_images（图片必须先于处理记录删除）
+                    List<ProcessRecord> records = processRecordMapper.selectList(
+                            new LambdaQueryWrapper<ProcessRecord>().eq(ProcessRecord::getOrderId, orderIdInt));
+                    for (ProcessRecord record : records) {
+                        Integer pid = record.getProcessId();
+                        if (pid != null) {
+                            processImageMapper.delete(
+                                    new LambdaQueryWrapper<ProcessImage>().eq(ProcessImage::getProcessId, pid));
+                        }
+                    }
+                    // 处理记录本身
+                    processRecordMapper.delete(
+                            new LambdaQueryWrapper<ProcessRecord>().eq(ProcessRecord::getOrderId, orderIdInt));
+
+                    // 1c) 核验记录（VerificationRecords.orderId 是 Integer）
+                    verificationRecordsMapper.delete(
+                            new LambdaQueryWrapper<VerificationRecords>().eq(VerificationRecords::getOrderId, orderIdInt));
+                }
+
+                // 1d) 删除该告警下的所有工单
+                workOrderMapper.delete(
+                        new LambdaQueryWrapper<WorkOrder>().eq(WorkOrder::getAlarmId, alarmId));
+
+                // 1e) 删除告警本身
+                alarmMapper.deleteById(alarmId);
+            }
+        }
+
+        // 1f) 指标绑定记录 indicator_device（外键依赖 device_id）
+        indicatorDeviceMapper.delete(new LambdaQueryWrapper<IndicatorDevice>()
+                .eq(IndicatorDevice::getDeviceId, id));
+
+        // ───────────────────────────────────────────────────────
+        // 2. 再清理设备扩展属性层：明细表 + push_data + device_attr
+        // ───────────────────────────────────────────────────────
         DeviceAttr deviceAttr = deviceAttrMapper.selectOne(
                 new LambdaQueryWrapper<DeviceAttr>().eq(DeviceAttr::getDeviceId, id));
         if (deviceAttr != null) {
             String attrTag = deviceAttr.getAttrTag();
             Long attrId   = deviceAttr.getAttrId();
-            switch (attrTag) {
-                case "electric_meter":
-                    electricMeterMapper.deleteById(attrId);
-                    electricityMapper.delete(new LambdaQueryWrapper<DeviceSubmissionElectricity>()
-                            .eq(DeviceSubmissionElectricity::getMn, String.valueOf(attrId)));
-                    break;
-                case "air_station":
-                    airStationMapper.deleteById(attrId);
-                    airStationSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionAirStation>()
-                            .eq(DeviceSubmissionAirStation::getMn, String.valueOf(attrId)));
-                    break;
-                case "surface_water":
-                    surfaceWaterMapper.deleteById(attrId);
-                    surfaceWaterSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionSurfaceWater>()
-                            .eq(DeviceSubmissionSurfaceWater::getMn, String.valueOf(attrId)));
-                    break;
-                case "tvoc":
-                    tvocMapper.deleteById(attrId);
-                    tvocSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionTvoc>()
-                            .eq(DeviceSubmissionTvoc::getMn, String.valueOf(attrId)));
-                    break;
+            if (attrId != null) {
+                String mn = String.valueOf(attrId);
+                switch (attrTag == null ? "" : attrTag) {
+                    case "electric_meter":
+                        electricityMapper.delete(new LambdaQueryWrapper<DeviceSubmissionElectricity>()
+                                .eq(DeviceSubmissionElectricity::getMn, mn));
+                        electricMeterMapper.deleteById(attrId);
+                        break;
+                    case "air_station":
+                        airStationSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionAirStation>()
+                                .eq(DeviceSubmissionAirStation::getMn, mn));
+                        airStationMapper.deleteById(attrId);
+                        break;
+                    case "surface_water":
+                        surfaceWaterSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionSurfaceWater>()
+                                .eq(DeviceSubmissionSurfaceWater::getMn, mn));
+                        surfaceWaterMapper.deleteById(attrId);
+                        break;
+                    case "tvoc":
+                        tvocSubmissionMapper.delete(new LambdaQueryWrapper<DeviceSubmissionTvoc>()
+                                .eq(DeviceSubmissionTvoc::getMn, mn));
+                        tvocMapper.deleteById(attrId);
+                        break;
+                }
             }
             deviceAttrMapper.deleteById(deviceAttr.getId());
         }
+
+        // 3. 最后删除设备主表
         deviceMapper.deleteById(id);
         return "删除成功";
     }
@@ -192,14 +274,26 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         ImportParams params=new ImportParams();
         params.setTitleRows(1);
         params.setHeadRows(1);
-        List<Device> devices = ExcelImportUtil.importExcel(file.getInputStream(), Device.class, params);
+        List<DeviceTemplateVO> devices = ExcelImportUtil.importExcel(file.getInputStream(), DeviceTemplateVO.class, params);
         if (devices == null || devices.isEmpty()) {
             return "文件内容为空";
         }
-        for (Device device : devices) {
-            if (device.getDeviceName() == null || device.getDeviceName().isEmpty()) {
+        for (DeviceTemplateVO vo : devices) {
+            if (vo.getDeviceName() == null || vo.getDeviceName().isEmpty()) {
                 continue;
             }
+            // 按模板「设备类别」名称反查分类ID
+            DeviceCategory category = deviceCategoryService.getOne(
+                    new LambdaQueryWrapper<DeviceCategory>()
+                            .eq(DeviceCategory::getCategoryName, vo.getDeviceCategoryId()));
+            if (category == null) {
+                continue;
+            }
+            Device device = new Device();
+            device.setDeviceName(vo.getDeviceName());
+            device.setDeviceCategoryId(category.getId());
+            device.setLocation(vo.getLocation());
+            device.setStatus(Long.valueOf(vo.getStatus() == null ? 1 : vo.getStatus().intValue()));
             this.save(device);
             // 创建 device_attr 关联记录
             createDeviceAttrForDevice(device);
@@ -283,7 +377,7 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         }
     }
 
-    public String exportExcel(List<Device> devices, HttpServletResponse response) throws IOException {
+    public void exportExcel(List<Device> devices, HttpServletResponse response) throws IOException {
         Workbook workbook = ExcelExportUtil.exportExcel(new ExportParams("设备信息列表", "设备信息"), Device.class, devices);
 
         // 设置响应头，触发浏览器下载
@@ -295,31 +389,23 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         // 写入响应输出流
         workbook.write(response.getOutputStream());
         workbook.close();
-        return "导出成功";
     }
 
     @Override
-    public String exportTemplate(HttpServletResponse response) throws IOException {
-        List<Device> devices = new ArrayList<>();
-        Device device = new Device();
-        device.setDeviceName("设备名称");
-        device.setLocation("设备位置");
-        device.setStatus(1L);
-        device.setDeviceCategoryId(1L);
-        devices.add(device);
-        ExportParams exportParams = new ExportParams("设备信息列表", "设备信息", ExcelType.XSSF);
-        Workbook workbook = ExcelExportUtil.exportExcel(exportParams, Device.class, devices);
+    public void exportTemplate(HttpServletResponse response) throws IOException {
+        List<DeviceTemplateVO> devices = new ArrayList<>();
+        ExportParams exportParams = new ExportParams("设备信息导入模板", "设备信息", ExcelType.XSSF);
+        Workbook workbook = ExcelExportUtil.exportExcel(exportParams, DeviceTemplateVO.class, devices);
 
         // 设置响应头，触发浏览器下载
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setCharacterEncoding("UTF-8");
-        String fileName = URLEncoder.encode("设备信息列表.xlsx", "UTF-8");
+        String fileName = URLEncoder.encode("设备信息导入模板.xlsx", "UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
 
         // 写入响应输出流
         workbook.write(response.getOutputStream());
         workbook.close();
-        return "导出模板成功";
     }
 
     /** 各属性表允许更新的字段白名单 + 范围 [min, max]，null 表示不限制 */

@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/workOrder")
@@ -70,14 +69,6 @@ public class WorkOrderController {
     public Result<Void> verify(@Valid @RequestBody VerifyWorkOrderRequest request) {
         workOrderService.verifyWorkOrder(request);
         return Result.success(null);
-    }
-
-    /** 上传处理完成图片（支持多张） */
-    @PostMapping("/uploadImages")
-    @Operation(summary = "上传处理图片")
-    public Result<List<String>> uploadImages(@RequestParam Long orderId,
-                                             @RequestParam("images") MultipartFile[] images) {
-        return Result.success(workOrderService.uploadImages(orderId, images));
     }
 
     /** 分页查询工单（返回带设备名称等冗余字段的VO） */

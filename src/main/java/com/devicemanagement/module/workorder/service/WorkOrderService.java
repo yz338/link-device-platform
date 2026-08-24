@@ -10,8 +10,6 @@ import com.devicemanagement.module.workorder.vo.WorkOrderStatsVO;
 import com.devicemanagement.module.workorder.vo.WorkOrderVO;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 
 public interface WorkOrderService extends IService<WorkOrder> {
       /** 下发工单 */
@@ -28,8 +26,6 @@ public interface WorkOrderService extends IService<WorkOrder> {
       void processWorkOrder(Long orderId, String method, String processDescription, MultipartFile[] images);
       /** 核验工单：管理员提交核验记录 */
       void verifyWorkOrder(VerifyWorkOrderRequest request);
-      /** 上传处理完成图片 */
-      List<String> uploadImages(Long orderId, MultipartFile[] images);
       /** 工单统计 */
       WorkOrderStatsVO getStats();
 }

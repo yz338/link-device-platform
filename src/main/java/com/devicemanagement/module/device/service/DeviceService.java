@@ -22,6 +22,6 @@ public interface DeviceService extends IService<Device> {
     String importExcel(MultipartFile file) throws Exception;
     DeviceDetailVO getDeviceDetail(Long id);
     void updateDeviceAttr(DeviceAttrUpdateDTO dto);
-    String exportExcel(List<Device> devices, HttpServletResponse response) throws IOException;
-    String exportTemplate(HttpServletResponse response) throws IOException;
+    void exportExcel(List<Device> devices, HttpServletResponse response) throws IOException;
+    void exportTemplate(HttpServletResponse response) throws IOException;
 }

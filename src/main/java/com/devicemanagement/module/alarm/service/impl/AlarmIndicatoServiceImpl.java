@@ -1,6 +1,7 @@
 package com.devicemanagement.module.alarm.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.devicemanagement.module.alarm.bean.Alarm;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -61,8 +63,39 @@ public class AlarmIndicatoServiceImpl extends ServiceImpl<AlarmIndicatorMapper, 
         Page<AlarmIndicator> page = baseMapper.selectPage(
                 new Page<>(alarmIndicatorDTO.getPageNum(), alarmIndicatorDTO.getPageSize()), wrapper);
 
+        List<AlarmIndicator> indicators = page.getRecords();
         List<AlarmIndicatorVO> voList = new ArrayList<>();
-        for (AlarmIndicator indicator : page.getRecords()) {
+        if (indicators.isEmpty()) {
+            Page<AlarmIndicatorVO> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+            result.setRecords(voList);
+            return result;
+        }
+
+        // 批量查询所有 indicator_id -> device_id 关联
+        List<Long> indicatorIds = indicators.stream().map(AlarmIndicator::getId).collect(Collectors.toList());
+        List<IndicatorDevice> relations = indicatorDeviceMapper.selectList(
+                Wrappers.<IndicatorDevice>lambdaQuery().in(IndicatorDevice::getIndicatorId, indicatorIds));
+        // 批量查询涉及的所有设备，id -> deviceName
+        List<Long> allDeviceIds = relations.stream()
+                .map(IndicatorDevice::getDeviceId).distinct().collect(Collectors.toList());
+        Map<Long, String> deviceNameMap = new java.util.HashMap<>();
+        if (!allDeviceIds.isEmpty()) {
+            List<Device> devices = deviceMapper.selectBatchIds(allDeviceIds);
+            deviceNameMap = devices.stream()
+                    .collect(Collectors.toMap(Device::getId, Device::getDeviceName, (a, b) -> a));
+        }
+        // 按 indicatorId 分组 deviceNames
+        Map<Long, List<String>> indicatorDeviceNamesMap = new java.util.HashMap<>();
+        for (IndicatorDevice r : relations) {
+            String name = deviceNameMap.get(r.getDeviceId());
+            if (name != null) {
+                indicatorDeviceNamesMap
+                        .computeIfAbsent(r.getIndicatorId(), k -> new ArrayList<>())
+                        .add(name);
+            }
+        }
+
+        for (AlarmIndicator indicator : indicators) {
             AlarmIndicatorVO vo = new AlarmIndicatorVO();
             BeanUtils.copyProperties(indicator, vo);
             if (indicator.getDeviceCategoryId() != null) {
@@ -71,6 +104,9 @@ public class AlarmIndicatoServiceImpl extends ServiceImpl<AlarmIndicatorMapper, 
                     vo.setDeviceCategoryName(category.getCategoryName());
                 }
             }
+            // 填充作用设备列表
+            List<String> names = indicatorDeviceNamesMap.get(indicator.getId());
+            vo.setDeviceNames(names != null ? names : new ArrayList<>());
             voList.add(vo);
         }
 

@@ -322,52 +322,6 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
     }
 
     @Override
-    public List<String> uploadImages(Long orderId, MultipartFile[] images) {
-        // 与提交处理分离的图片上传入口，按 orderId 存入 process_images（processId 留空）
-        WorkOrder wo = workOrderMapper.selectById(orderId);
-        if (wo == null) {
-            throw new BusinessException("工单不存在");
-        }
-        if (images == null || images.length == 0) {
-            throw new BusinessException("请至少上传一张图片");
-        }
-        if (images.length > MAX_IMAGE_COUNT) {
-            throw new BusinessException("最多上传 " + MAX_IMAGE_COUNT + " 张图片");
-        }
-        List<String> paths = new ArrayList<>();
-        Date now = new Date();
-        for (MultipartFile image : images) {
-            if (image == null || image.isEmpty()) {
-                continue;
-            }
-            String ext = resolveExtension(image.getOriginalFilename());
-            if (!ALLOWED_EXTENSIONS.contains(ext)) {
-                throw new BusinessException("不支持的图片格式：" + image.getOriginalFilename()
-                        + "，仅支持 jpg/jpeg/png/gif/webp/bmp");
-            }
-            String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
-            String path;
-            try {
-                Path dir = webMvcConfig.getAbsUploadPath().resolve("workorder");
-                Files.createDirectories(dir);
-                image.transferTo(dir.resolve(filename).toFile());
-                path = "/upload/workorder/" + filename;
-            } catch (IOException e) {
-                throw new BusinessException("图片保存失败：" + image.getOriginalFilename());
-            }
-            ProcessImage record = new ProcessImage();
-            record.setImageUrl(path);
-            record.setCreateTime(now);
-            processImageMapper.insert(record);
-            paths.add(path);
-        }
-        if (paths.isEmpty()) {
-            throw new BusinessException("请至少上传一张图片");
-        }
-        return paths;
-    }
-
-    @Override
     public WorkOrderStatsVO getStats() {
         WorkOrderStatsVO vo = new WorkOrderStatsVO();
         vo.setTotalOrders(workOrderMapper.selectCount(null));
@@ -487,7 +441,7 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
             }
         }
 
-        // 处理记录（按 id 倒序取最新一条，兼容打回后多次处理的场景）
+        // 处理记录：最新一条用于展示处理方式/说明 + 图片（重新处理属于一次全新处理，不携带旧图）
         ProcessRecord pr = processRecordMapper.selectOne(Wrappers.<ProcessRecord>lambdaQuery()
                 .eq(ProcessRecord::getOrderId, wo.getOrderId())
                 .orderByDesc(ProcessRecord::getProcessId)
@@ -496,7 +450,6 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
             vo.setMethod(pr.getMethod());
             vo.setProcessDescription(pr.getProcessDescription());
         }
-
         // 核验记录（按 id 倒序取最新一条，兼容多次核验的场景）
         VerificationRecords vr = verificationRecordsMapper.selectOne(
                 Wrappers.<VerificationRecords>lambdaQuery()
@@ -508,9 +461,9 @@ public class WorkOrderServiceimpl extends ServiceImpl<WorkOrderMapper, WorkOrder
             vo.setVerificationDescription(vr.getVerificationDescription());
         }
 
-        // 处理图片列表：按最新处理记录 ID 关联的 process_images，按上传顺序返回
+        // 处理图片：只关联最新处理记录 ID（重新处理时不携带旧处理记录的图片）
         List<String> images = new ArrayList<>();
-        if (pr != null) {
+        if (pr != null && pr.getProcessId() != null) {
             List<ProcessImage> imageList = processImageMapper.selectList(
                     Wrappers.<ProcessImage>lambdaQuery()
                             .eq(ProcessImage::getProcessId, pr.getProcessId())

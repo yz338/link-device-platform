@@ -23,4 +23,6 @@ public class UserProfileResponse {
     private List<String> roles;
     @Schema(description = "权限码列表", example = "[\"system:user:list\"]")
     private List<String> permissions;
+    @Schema(description = "接收消息邮件的真实邮箱，空值则不发送邮件", example = "admin@example.com")
+    private String email;
 }

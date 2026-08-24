@@ -142,12 +142,10 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
     private NotificationVO convertToVO(Notification notification) {
         NotificationVO vo = new NotificationVO();
         vo.setId(notification.getId());
-        vo.setUserId(notification.getUserId());
         vo.setSenderId(notification.getSenderId());
         vo.setTitle(notification.getTitle());
         vo.setContent(notification.getContent());
         vo.setIsRead(notification.getIsRead());
-        vo.setReadTime(notification.getReadTime());
         vo.setCreateTime(notification.getCreateTime());
 
         if (notification.getSenderId() != null) {

@@ -101,17 +101,20 @@ public class AlarmDetectTask {
     }
 
     /**
-     * 根据 attrTag 获取设备最新报送记录
+     * 根据 attrTag 获取设备最新报送记录（返回完整实体，用于取 data_time + 各指标字段）
      */
     private Object getLatestRecord(String attrTag, Long attrId) {
         if (attrTag == null || attrId == null) return null;
+        String mn = String.valueOf(attrId);
+        List<?> list;
         switch (attrTag) {
-            case "electric_meter": return electricityMapper.selectLatestSubmitTime(String.valueOf(attrId));
-            case "air_station":    return airStationMapper.selectLatestSubmitTime(String.valueOf(attrId));
-            case "surface_water":  return surfaceWaterMapper.selectLatestSubmitTime(String.valueOf(attrId));
-            case "tvoc":           return tvocMapper.selectLatestSubmitTime(String.valueOf(attrId));
+            case "electric_meter": list = electricityMapper.selectTop10ByMn(mn);   break;
+            case "air_station":    list = airStationMapper.selectTop10ByMn(mn);    break;
+            case "surface_water":  list = surfaceWaterMapper.selectTop10ByMn(mn);  break;
+            case "tvoc":           list = tvocMapper.selectTop10ByMn(mn);           break;
             default:               return null;
         }
+        return (list != null && !list.isEmpty()) ? list.get(0) : null;
     }
 
     /**

@@ -56,4 +56,22 @@ public class AuthController {
     public Result<UserProfileResponse> profile(Authentication authentication) {
         return Result.success(authService.profile(authentication.getName()));
     }
+
+    /** 当前登录用户修改自己的昵称和邮箱。 */
+    @PutMapping("/profile")
+    @Operation(summary = "修改个人资料")
+    public Result<Void> updateProfile(Authentication authentication,
+                                      @Valid @RequestBody ProfileUpdateRequest request) {
+        authService.updateProfile(authentication.getName(), request);
+        return Result.success(null);
+    }
+
+    /** 当前登录用户修改自己的登录密码（需校验原密码）。 */
+    @PutMapping("/password")
+    @Operation(summary = "修改个人密码")
+    public Result<Void> updatePassword(Authentication authentication,
+                                       @Valid @RequestBody PasswordUpdateRequest request) {
+        authService.updatePassword(authentication.getName(), request);
+        return Result.success(null);
+    }
 }
