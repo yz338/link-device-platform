@@ -3,9 +3,9 @@ spring:
     name: device-management
   datasource:
     # 使用环境变量便于学生按自己的 MySQL 账号调整，不在代码中写死真实密码。
-    url: ${DEVICE_DB_URL:jdbc:mysql://121.40.224.123:3306/device_management_hy?serverTimezone=Asia/Shanghai&useSSL=false&characterEncoding=utf8}
-    username: ${DEVICE_DB_USERNAME:team_user}
-    password: ${DEVICE_DB_PASSWORD:Team123!@#}
+    url: ${DEVICE_DB_URL:jdbc:mysql://127.0.0.1/device_management_hy?serverTimezone=Asia/Shanghai&useSSL=false&characterEncoding=utf8}
+    username: ${DEVICE_DB_USERNAME:root}
+    password: ${DEVICE_DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
@@ -28,8 +28,8 @@ spring:
     # 示例（QQ 邮箱）：host=smtp.qq.com port=465 username=xxx@qq.com password=邮箱授权码（非登录密码）
     host: ${DEVICE_MAIL_HOST:smtp.qq.com}
     port: ${DEVICE_MAIL_PORT:465}
-    username: ${DEVICE_MAIL_USERNAME:3363214958@qq.com}
-    password: ${DEVICE_MAIL_PASSWORD:opzgskgipxrydcag}
+    username: ${DEVICE_MAIL_USERNAME:12345678954@qq.com}
+    password: ${DEVICE_MAIL_PASSWORD:123456}
     default-encoding: UTF-8
     properties:
       mail:
